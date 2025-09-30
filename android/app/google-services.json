@@ -1,0 +1,41 @@
+{
+  "project_info": {
+    "project_number": "137720931319",
+    "project_id": "data-honor-355307",
+    "storage_bucket": "data-honor-355307.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:137720931319:android:a5124b6db1a0f38aa8c4f2",
+        "android_client_info": {
+          "package_name": "com.levelUp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDGVZLmuoUv7Y9knh2pVwQS3hjsSjAHKaY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "137720931319-rfvqb6tigap9qnfbp13sdt22k4rfc3l2.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "137720931319-reafq1ji446fhu7v5ecq40v1br16u6oa.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.levelupLMS"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

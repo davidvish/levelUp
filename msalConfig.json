@@ -1,0 +1,14 @@
+{
+  "client_id" : "bcd13e2d-0e08-4355-a2f7-69747885c718",
+  "authorization_user_agent" : "DEFAULT",
+  "redirect_uri" : "msauth://com.levelUp/%2BJ%2B3yf%2FmrgPgKeg1llIttpSjcws%3D",
+  "authorities" : [
+    {
+      "type": "AAD",
+      "audience": {
+        "type": "AzureADMultipleOrgs",
+        "tenant_id": "organizations"
+      }
+    }
+  ]
+}
