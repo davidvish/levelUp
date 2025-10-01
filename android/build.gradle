@@ -4,7 +4,9 @@ buildscript {
         minSdkVersion = 24
         compileSdkVersion = 35
         targetSdkVersion = 35
-        ndkVersion = "26.1.10909125"
+        ndkVersion = "27.1.12297006"
+        googlePlayServicesAuthVersion = "20.7.0" // <--- use this version or newer
+
         kotlinVersion = "2.0.21"
     }
     repositories {
@@ -20,9 +22,16 @@ buildscript {
      // Add this allprojects block
     allprojects {
         repositories {
-            maven {
-        url "https://pkgs.dev.azure.com/MicrosoftDeviceSDK/DuoSDK-Public/_packaging/Duo-SDK-Feed/maven/v1"
-        }
+                    google()
+                mavenCentral()
+                    maven {
+                            url "https://pkgs.dev.azure.com/MicrosoftDeviceSDK/DuoSDK-Public/_packaging/Duo-SDK-Feed/maven/v1"
+                        }
+                }
+    }
+     configurations.all {
+        resolutionStrategy {
+            force 'com.facebook.fbjni:fbjni:0.7.0'
         }
     }
 }

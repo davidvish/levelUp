@@ -11,7 +11,7 @@ import {
   Linking,
   Button,
   TouchableOpacity,
-  Text
+  Text,
 } from 'react-native';
 import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {RNButton, RNContainer, RNImage, RNText} from '../../../Common';
@@ -26,7 +26,7 @@ import {PieChart} from 'react-native-svg-charts';
 import {
   useFocusEffect,
   useIsFocused,
-  useNavigation
+  useNavigation,
 } from '@react-navigation/native';
 import {useDispatch} from 'react-redux';
 import {homeScreenSelector} from './module/reducer';
@@ -47,7 +47,7 @@ import {
   storeCourseItemDataOnNavigationAction,
   storePathItemDataOnNavigationAction,
   upcomingEventsRequestAction,
-  watchHistoryDeleteRequestAction
+  watchHistoryDeleteRequestAction,
 } from './module/action';
 //import ShimmerPlaceHolder from 'react-native-shimmer-placeholder';
 import LinearGradient from 'react-native-linear-gradient';
@@ -63,7 +63,7 @@ import {scromChapterSelector} from '../CourseStack/module/reducer';
 import {loginSelector} from '../../auth/Login/module/reducer';
 import {getValue, setAuthenticationToken} from '../../../utils/authentication';
 import {refreshTokenRequestAction} from '../../auth/Login/module/action';
-import DocumentPicker, {types} from 'react-native-document-picker';
+//import DocumentPicker, {types} from 'react-native-document-picker';
 
 const formatDuration = (minutes: number) => {
   const hours = Math.floor(minutes / 60);
@@ -90,7 +90,7 @@ const secondFormatDuration = (seconds: number | undefined | null): string => {
 
 function convertIntoTime(
   time: string,
-  timeZone: string
+  timeZone: string,
 ): {formattedTime: string; timestamp: number} {
   const timeInTimezone = moment.tz(time, timeZone);
   const systemTimezone = moment.tz.guess();
@@ -134,7 +134,7 @@ function convertDateIntoDay(dateString: any) {
     'Sep',
     'Oct',
     'Nov',
-    'Dec'
+    'Dec',
   ];
   const monthName = monthNames[monthIndex];
   const newConvertDate = `${monthName} ${day}, ${year}`;
@@ -178,7 +178,7 @@ const Home = (props: any) => {
     upcomingEventLoading,
     countinueLearningLoading,
     pieChartLoading,
-    barChartLoading
+    barChartLoading,
   } = homeScreenSelector();
   const [currentEventIndex, setCurrentEventIndex] = useState(0);
   const [barData, setBarData] = useState<any[]>([]);
@@ -195,7 +195,7 @@ const Home = (props: any) => {
   const CHARTCOLORS = {
     BLACK: '#000000',
     CHATCOLOR1: COLORS.CHATCOLOR2, // Replace with your actual color value
-    CHATCOLOR2: COLORS.CHATCOLOR1 // Replace with your actual color value
+    CHATCOLOR2: COLORS.CHATCOLOR1, // Replace with your actual color value
   };
 
   // Define type for bar chart data
@@ -213,7 +213,7 @@ const Home = (props: any) => {
     COMPLETED: 0,
     OVERDUE: 0,
     CANCELLED: 0,
-    NOT_STARTED: 0
+    NOT_STARTED: 0,
   });
 
   const RemoveFunction = (item: any) => {
@@ -231,7 +231,7 @@ const Home = (props: any) => {
           style={{
             paddingHorizontal: 10,
             backgroundColor: COLORS.WHITE,
-            paddingVertical: 20
+            paddingVertical: 20,
           }}>
           <RNText style={{marginTop: 5}} large bold>
             Confirmation
@@ -266,7 +266,7 @@ const Home = (props: any) => {
     navigation.addListener('blur', () => {
       BackHandler.removeEventListener(
         'hardwareBackPress',
-        handleBackButtonClick
+        handleBackButtonClick,
       );
     });
     navigation.addListener('focus', () => {
@@ -275,7 +275,7 @@ const Home = (props: any) => {
     return () => {
       BackHandler.removeEventListener(
         'hardwareBackPress',
-        handleBackButtonClick
+        handleBackButtonClick,
       );
       (navigation as any).removeListener('blur');
       (navigation as any).removeListener('focus');
@@ -288,12 +288,12 @@ const Home = (props: any) => {
         text: STRINGS.exit,
         onPress: () => {
           BackHandler.exitApp();
-        }
+        },
       },
       {
         text: STRINGS.cancel,
-        onPress: () => console.log('cancelled')
-      }
+        onPress: () => console.log('cancelled'),
+      },
     ]);
     return true;
   };
@@ -317,7 +317,7 @@ const Home = (props: any) => {
     pieChartFunction('All');
     getProfileFunction();
     await Promise.all([
-      new Promise(resolve => setTimeout(resolve, 2000)) // Simulating an API call
+      new Promise(resolve => setTimeout(resolve, 2000)), // Simulating an API call
       // Add other async operations here
     ]);
     console.log('Refresh complete');
@@ -373,7 +373,7 @@ const Home = (props: any) => {
       return () => {
         // Any cleanup logic if necessary
       };
-    }, [])
+    }, []),
   );
 
   const upcomingEventFunction = () => {
@@ -381,7 +381,7 @@ const Home = (props: any) => {
       PageSize: 2,
       PageNumber: 1,
       orderBy: 'startDateTime',
-      sortOrder: 'asc'
+      sortOrder: 'asc',
     };
     dispatch(upcomingEventsRequestAction({body}));
   };
@@ -390,7 +390,7 @@ const Home = (props: any) => {
     let body = {
       entityType: 0,
       pageNumber: 1,
-      pageSize: 3
+      pageSize: 3,
     };
     dispatch(countinueLearningRequestAction({body}));
   };
@@ -399,7 +399,7 @@ const Home = (props: any) => {
     let body = {
       entityType: 0,
       pageNumber: 1,
-      pageSize: 5
+      pageSize: 5,
     };
     dispatch(getUserEntitiesRequestAction({body}));
   };
@@ -410,14 +410,14 @@ const Home = (props: any) => {
 
   const pieChartFunction = (item: any) => {
     let body = {
-      type: item
+      type: item,
     };
     dispatch(pieChartRequestAction({body}));
   };
 
   const watchHistoryDeleteFunction = () => {
     let body = {
-      id: removeItemStore?.watchListId || ''
+      id: removeItemStore?.watchListId || '',
     };
     let callback = (res: any) => {
       setModalVisible(false);
@@ -534,7 +534,7 @@ const Home = (props: any) => {
     if (pieChartData && pieChartData?.length != 0) {
       const piadata: any = [
         {value: pieChartData[0]?.count || 0, svg: {fill: '#4647C6'}},
-        {value: pieChartData[1]?.count || 0, svg: {fill: '#63FFEC'}} // Transparent segment to create half-circle effect
+        {value: pieChartData[1]?.count || 0, svg: {fill: '#63FFEC'}}, // Transparent segment to create half-circle effect
       ];
       setPieData(piadata);
     }
@@ -544,14 +544,14 @@ const Home = (props: any) => {
     if (item?.resourceType == 'SCORM' || item?.resourceType == 'COURSE') {
       dispatch(storeCourseItemDataOnNavigationAction(item));
       _onPressNavigate(SCREEN_NAMES.CourseStack, {
-        screen: SCREEN_NAMES.CoursePreview
+        screen: SCREEN_NAMES.CoursePreview,
       });
     } else if (item?.resourceType == 'LEARNINGCARD') {
       _onPressNavigate(SCREEN_NAMES.FlashCardStack, {
         screen: SCREEN_NAMES.FlashCardPreview,
         params: {
-          data: item
-        }
+          data: item,
+        },
       });
     } else {
       dispatch(storeCourseItemDataOnNavigationAction(item));
@@ -559,8 +559,8 @@ const Home = (props: any) => {
       _onPressNavigate(SCREEN_NAMES.PathStack, {
         screen: SCREEN_NAMES.MainPath,
         params: {
-          data: item
-        }
+          data: item,
+        },
       });
     }
   };
@@ -602,7 +602,7 @@ const Home = (props: any) => {
             duration={2000}
             style={[
               styles.cardMainView,
-              {height: scale(100), elevation: 0, borderRadius: 0}
+              {height: scale(100), elevation: 0, borderRadius: 0},
             ]}
           />
         ) : upcomingEventUserData?.length != 0 ? (
@@ -628,12 +628,12 @@ const Home = (props: any) => {
               horizontal={false}
               data={upcomingEventUserData}
               contentContainerStyle={{
-                paddingBottom: 5 // adjust the value as needed
+                paddingBottom: 5, // adjust the value as needed
               }}
               renderItem={({item, index}) => {
                 const handlePress = (item: any) => {
                   _onPressNavigate(SCREEN_NAMES.UpcomingEventDetails, {
-                    data: item
+                    data: item,
                   });
                 };
 
@@ -693,8 +693,8 @@ const Home = (props: any) => {
                             width: scale(82),
                             right: scale(30),
                             fontSize: 10,
-                            padding: 2
-                          }
+                            padding: 2,
+                          },
                         ]}>
                         {item?.meetingType}
                       </RNText>
@@ -709,29 +709,29 @@ const Home = (props: any) => {
     );
   };
 
-  const pickFile = async () => {
-    try {
-      console.log('DocumentPicker object:', DocumentPicker);
+  // const pickFile = async () => {
+  //   try {
+  //     console.log('DocumentPicker object:', DocumentPicker);
 
-      const res = await DocumentPicker.pickSingle({
-        type: [
-          types.pdf,
-          types.doc,
-          types.docx,
-          types.plainText,
-          types.audio,
-          types.video
-        ]
-      });
-      console.log('File details:', res);
-    } catch (err: any) {
-      if (DocumentPicker.isCancel(err)) {
-        console.log('User cancelled file picker');
-      } else {
-        console.error('Error picking file:', err);
-      }
-    }
-  };
+  //     const res = await DocumentPicker.pickSingle({
+  //       type: [
+  //         types.pdf,
+  //         types.doc,
+  //         types.docx,
+  //         types.plainText,
+  //         types.audio,
+  //         types.video
+  //       ]
+  //     });
+  //     console.log('File details:', res);
+  //   } catch (err: any) {
+  //     if (DocumentPicker.isCancel(err)) {
+  //       console.log('User cancelled file picker');
+  //     } else {
+  //       console.error('Error picking file:', err);
+  //     }
+  //   }
+  // };
 
   const CountinueLearningView = () => {
     return (
@@ -748,7 +748,7 @@ const Home = (props: any) => {
                   duration={2000}
                   style={[
                     styles.cardMainView,
-                    {height: scale(100), elevation: 0, borderRadius: 0}
+                    {height: scale(100), elevation: 0, borderRadius: 0},
                   ]}
                 />
               )}
@@ -763,8 +763,8 @@ const Home = (props: any) => {
                     styles.seeAllView,
                     {
                       marginTop:
-                        upcomingEventUserData?.length != 0 ? '15%' : '7%'
-                    }
+                        upcomingEventUserData?.length != 0 ? '15%' : '7%',
+                    },
                   ]}>
                   <RNText large bold>
                     Continue Learning
@@ -789,7 +789,7 @@ const Home = (props: any) => {
                   horizontal={false}
                   data={countinueLearningData}
                   contentContainerStyle={{
-                    paddingBottom: 5 // adjust the value as needed
+                    paddingBottom: 5, // adjust the value as needed
                   }}
                   renderItem={({item, index}) => {
                     const playedTime = item?.playedTime || 0;
@@ -1003,8 +1003,8 @@ const Home = (props: any) => {
                 height: scale(250),
                 elevation: 0,
                 borderRadius: 0,
-                paddingVertical: 0
-              }
+                paddingVertical: 0,
+              },
             ]}
           />
         ) : (
@@ -1021,14 +1021,14 @@ const Home = (props: any) => {
                       flexDirection: 'row',
                       marginTop: 15,
                       alignItems: 'center',
-                      paddingLeft: 5
+                      paddingLeft: 5,
                     }}>
                     <View
                       style={{
                         borderRadius: 2,
                         width: 12,
                         height: 12,
-                        backgroundColor: COLORS.CHATCOLOR1
+                        backgroundColor: COLORS.CHATCOLOR1,
                       }}
                     />
                     <RNText style={{marginLeft: 10}} small>
@@ -1040,7 +1040,7 @@ const Home = (props: any) => {
                         width: 12,
                         height: 12,
                         backgroundColor: COLORS.CHATCOLOR2,
-                        marginLeft: 20
+                        marginLeft: 20,
                       }}
                     />
                     <RNText style={{marginLeft: 10}} small>
@@ -1052,7 +1052,7 @@ const Home = (props: any) => {
                 <View
                   style={{
                     flexDirection: 'row',
-                    justifyContent: 'space-between'
+                    justifyContent: 'space-between',
                   }}>
                   <View style={styles.mainBoxStyleRow}>
                     <RNText
@@ -1130,7 +1130,7 @@ const Home = (props: any) => {
                     flexDirection: 'row',
                     justifyContent: 'space-between',
                     marginTop: '6%',
-                    marginBottom: '3%'
+                    marginBottom: '3%',
                   }}>
                   <View style={styles.mainBoxStyleRow}>
                     <RNText
@@ -1256,8 +1256,8 @@ const Home = (props: any) => {
                 height: scale(250),
                 elevation: 0,
                 borderRadius: 0,
-                paddingVertical: 0
-              }
+                paddingVertical: 0,
+              },
             ]}
           />
         ) : (
@@ -1273,7 +1273,7 @@ const Home = (props: any) => {
                     paddingBottom: 30,
                     flexDirection: 'row',
                     justifyContent: 'space-between',
-                    alignItems: 'center'
+                    alignItems: 'center',
                   }}>
                   <RNText large bold>
                     Success Rate
@@ -1285,7 +1285,7 @@ const Home = (props: any) => {
                       backgroundColor: COLORS.WHITE,
                       borderRadius: 50,
                       padding: 10,
-                      elevation: 15
+                      elevation: 15,
                     }}>
                     <Image
                       source={IMAGES.chartFilter}
@@ -1326,7 +1326,7 @@ const Home = (props: any) => {
                         left: '23.7%',
                         position: 'absolute',
                         alignItems: 'center',
-                        height: 20
+                        height: 20,
                       }}>
                       <RNText TextAlignCenter medium semiBold>
                         {pieChartStatus == 'All'
@@ -1340,7 +1340,7 @@ const Home = (props: any) => {
                       style={{
                         flexDirection: 'row',
                         justifyContent: 'space-between',
-                        position: 'relative'
+                        position: 'relative',
                       }}>
                       <PieChart
                         style={{height: 200, width: 240}}
@@ -1395,12 +1395,12 @@ const Home = (props: any) => {
       } else if (item?.status == 'NOT_STARTED') {
         dispatch(storeCourseItemDataOnNavigationAction(item));
         _onPressNavigate(SCREEN_NAMES.CourseStack, {
-          screen: SCREEN_NAMES.CoursePreview
+          screen: SCREEN_NAMES.CoursePreview,
         });
       } else {
         dispatch(storeCourseItemDataOnNavigationAction(item));
         _onPressNavigate(SCREEN_NAMES.CourseStack, {
-          screen: SCREEN_NAMES.MainCourse
+          screen: SCREEN_NAMES.MainCourse,
         });
       }
     }
@@ -1425,8 +1425,8 @@ const Home = (props: any) => {
                       height: scale(250),
                       elevation: 0,
                       borderRadius: 0,
-                      paddingBottom: 0
-                    }
+                      paddingBottom: 0,
+                    },
                   ]}
                 />
               )}
@@ -1462,7 +1462,7 @@ const Home = (props: any) => {
                   showsHorizontalScrollIndicator={false}
                   data={courseListData}
                   contentContainerStyle={{
-                    paddingBottom: 5 // adjust the value as needed
+                    paddingBottom: 5, // adjust the value as needed
                   }}
                   renderItem={_courseRenderItem}
                   ItemSeparatorComponent={() => <View style={{width: 20}} />}
@@ -1512,7 +1512,7 @@ const Home = (props: any) => {
           onPress={() => {
             dispatch(storeCourseItemDataOnNavigationAction(item));
             _onPressNavigate(SCREEN_NAMES.CourseStack, {
-              screen: SCREEN_NAMES.CoursePreview
+              screen: SCREEN_NAMES.CoursePreview,
             });
           }}>
           {item?.bannerImageUrl ? (
@@ -1524,7 +1524,7 @@ const Home = (props: any) => {
               }
               style={[
                 styles.courseDummyImageStyle,
-                {borderTopLeftRadius: 10, borderTopRightRadius: 10}
+                {borderTopLeftRadius: 10, borderTopRightRadius: 10},
               ]}
             />
           ) : (
@@ -1545,8 +1545,8 @@ const Home = (props: any) => {
                 marginTop: 10,
                 paddingLeft: scale(20),
                 paddingRight: scale(10),
-                justifyContent: 'space-between'
-              }
+                justifyContent: 'space-between',
+              },
             ]}>
             <View style={{flexDirection: 'row'}}>
               <RNImage source={IMAGES.calendarCockCard} style={styles.icon} />
@@ -1566,7 +1566,7 @@ const Home = (props: any) => {
                   padding: 3,
                   paddingHorizontal: 10,
                   borderRadius: 5,
-                  marginLeft: 3
+                  marginLeft: 3,
                 }}>
                 <RNText TextAlignCenter small textColor={COLORS.WHITE}>
                   Overdue
@@ -1581,7 +1581,7 @@ const Home = (props: any) => {
                   padding: 3,
                   paddingHorizontal: 10,
                   borderRadius: 5,
-                  marginLeft: 3
+                  marginLeft: 3,
                 }}>
                 <RNText TextAlignCenter small textColor={COLORS.WHITE}>
                   {item?.isPassed ? 'Passed' : 'Failed'}
@@ -1594,7 +1594,7 @@ const Home = (props: any) => {
                   padding: 3,
                   paddingHorizontal: 10,
                   borderRadius: 5,
-                  marginLeft: 3
+                  marginLeft: 3,
                 }}>
                 <RNText TextAlignCenter small textColor={COLORS.WHITE}>
                   {''}
@@ -1624,8 +1624,8 @@ const Home = (props: any) => {
               styles.courseViewSmallText,
               {
                 paddingLeft:
-                  item?.resourceType == 'SCORM' ? scale(10) : scale(10)
-              }
+                  item?.resourceType == 'SCORM' ? scale(10) : scale(10),
+              },
             ]}>
             <RNText textColor={COLORS.GRAYTEXTCOLOR} small>
               {item?.resourceType == 'SCORM'
@@ -1653,7 +1653,7 @@ const Home = (props: any) => {
           <View
             style={[
               styles.progressContainer,
-              {paddingLeft: scale(20), marginTop: 7, width: '87%'}
+              {paddingLeft: scale(20), marginTop: 7, width: '87%'},
             ]}>
             <Progress.Bar
               borderWidth={0}
@@ -1735,8 +1735,8 @@ const Home = (props: any) => {
                       height: scale(230),
                       elevation: 0,
                       borderRadius: 0,
-                      paddingBottom: 0
-                    }
+                      paddingBottom: 0,
+                    },
                   ]}
                 />
               )}
@@ -1772,7 +1772,7 @@ const Home = (props: any) => {
                   showsHorizontalScrollIndicator={false}
                   data={flashCardListData}
                   contentContainerStyle={{
-                    paddingBottom: 5 // adjust the value as needed
+                    paddingBottom: 5, // adjust the value as needed
                   }}
                   renderItem={_flashCardRenderItem}
                   ItemSeparatorComponent={() => <View style={{width: 20}} />}
@@ -1815,8 +1815,8 @@ const Home = (props: any) => {
             _onPressNavigate(SCREEN_NAMES.FlashCardStack, {
               screen: SCREEN_NAMES.FlashCardPreview,
               params: {
-                data: item
-              }
+                data: item,
+              },
             })
           }>
           {item?.bannerImageUrl ? (
@@ -1844,8 +1844,8 @@ const Home = (props: any) => {
                 marginTop: 10,
                 paddingLeft: scale(20),
                 paddingRight: scale(10),
-                justifyContent: 'space-between'
-              }
+                justifyContent: 'space-between',
+              },
             ]}>
             <View style={{flexDirection: 'row'}}>
               <RNImage source={IMAGES.calendarCockCard} style={styles.icon} />
@@ -1864,7 +1864,7 @@ const Home = (props: any) => {
                   padding: 3,
                   paddingHorizontal: 10,
                   borderRadius: 5,
-                  marginLeft: 3
+                  marginLeft: 3,
                 }}>
                 <RNText TextAlignCenter small textColor={COLORS.WHITE}>
                   Overdue
@@ -1879,7 +1879,7 @@ const Home = (props: any) => {
                   padding: 3,
                   paddingHorizontal: 10,
                   borderRadius: 5,
-                  marginLeft: 3
+                  marginLeft: 3,
                 }}>
                 <RNText TextAlignCenter small textColor={COLORS.WHITE}>
                   {item?.isPassed ? 'Passed' : 'Failed'}
@@ -1892,7 +1892,7 @@ const Home = (props: any) => {
                   padding: 3,
                   paddingHorizontal: 10,
                   borderRadius: 5,
-                  marginLeft: 3
+                  marginLeft: 3,
                 }}
               />
             )}
@@ -1919,8 +1919,8 @@ const Home = (props: any) => {
                 width: 205,
                 alignItems: 'center',
                 marginRight: scale(20),
-                justifyContent: 'space-between'
-              }
+                justifyContent: 'space-between',
+              },
             ]}>
             <RNText textColor={COLORS.GRAYTEXTCOLOR} small>
               {item?.cardCount || 0} {item?.cardCount == 1 ? 'Card' : 'Cards'}
@@ -1933,7 +1933,7 @@ const Home = (props: any) => {
           <View
             style={[
               styles.progressContainer,
-              {paddingLeft: scale(20), marginTop: 7}
+              {paddingLeft: scale(20), marginTop: 7},
             ]}>
             <Progress.Bar
               borderWidth={0}
@@ -1958,15 +1958,15 @@ const Home = (props: any) => {
               _onPressNavigate(SCREEN_NAMES.FlashCardStack, {
                 screen: SCREEN_NAMES.FlashCardPreview,
                 params: {
-                  data: item
-                }
+                  data: item,
+                },
               });
             } else {
               _onPressNavigate(SCREEN_NAMES.FlashCardStack, {
                 screen: SCREEN_NAMES.MainFlashCard,
                 params: {
-                  data: item
-                }
+                  data: item,
+                },
               });
             }
           }}
@@ -2024,8 +2024,8 @@ const Home = (props: any) => {
                       height: scale(230),
                       elevation: 0,
                       borderRadius: 0,
-                      paddingBottom: 0
-                    }
+                      paddingBottom: 0,
+                    },
                   ]}
                 />
               )}
@@ -2061,7 +2061,7 @@ const Home = (props: any) => {
                   showsHorizontalScrollIndicator={false}
                   data={pathListData}
                   contentContainerStyle={{
-                    paddingBottom: 5 // adjust the value as needed
+                    paddingBottom: 5, // adjust the value as needed
                   }}
                   renderItem={_pathCardRenderItem}
                   ItemSeparatorComponent={() => <View style={{width: 20}} />}
@@ -2100,7 +2100,7 @@ const Home = (props: any) => {
             }
             style={[
               styles.courseDummyImageStyle,
-              {borderTopLeftRadius: 10, borderTopRightRadius: 10}
+              {borderTopLeftRadius: 10, borderTopRightRadius: 10},
             ]}
           />
         ) : (
@@ -2119,8 +2119,8 @@ const Home = (props: any) => {
               marginTop: 10,
               paddingLeft: scale(20),
               paddingRight: scale(10),
-              justifyContent: 'space-between'
-            }
+              justifyContent: 'space-between',
+            },
           ]}>
           <View style={{flexDirection: 'row'}}>
             <RNImage source={IMAGES.calendarCockCard} style={styles.icon} />
@@ -2139,7 +2139,7 @@ const Home = (props: any) => {
                 padding: 3,
                 paddingHorizontal: 10,
                 borderRadius: 5,
-                marginLeft: 3
+                marginLeft: 3,
               }}>
               <RNText TextAlignCenter small textColor={COLORS.WHITE}>
                 Overdue
@@ -2154,7 +2154,7 @@ const Home = (props: any) => {
                 padding: 3,
                 paddingHorizontal: 10,
                 borderRadius: 5,
-                marginLeft: 3
+                marginLeft: 3,
               }}>
               <RNText TextAlignCenter small textColor={COLORS.WHITE}>
                 {item?.isPassed ? 'Passed' : 'Failed'}
@@ -2213,7 +2213,7 @@ const Home = (props: any) => {
         <View
           style={[
             styles.progressContainer,
-            {paddingLeft: scale(20), marginTop: 7, width: '87%'}
+            {paddingLeft: scale(20), marginTop: 7, width: '87%'},
           ]}>
           <Progress.Bar
             borderWidth={0}
@@ -2268,7 +2268,7 @@ const Home = (props: any) => {
             dispatch(storeCourseItemDataOnNavigationAction(item));
             dispatch(storePathItemDataOnNavigationAction(item));
             _onPressNavigate(SCREEN_NAMES.PathStack, {
-              screen: SCREEN_NAMES.MainPath
+              screen: SCREEN_NAMES.MainPath,
             });
           }}
         />
@@ -2333,7 +2333,7 @@ const Home = (props: any) => {
             height: scale(170),
             alignSelf: 'center',
             marginTop: scale(50),
-            marginBottom: scale(70)
+            marginBottom: scale(70),
           }}
           resizeMode="cover"
         />
@@ -2369,7 +2369,7 @@ const Home = (props: any) => {
   };
 
   const shouldRenderChartView = !barChartData?.every((item: any) =>
-    item?.statusCounts?.every((statusCount: any) => statusCount?.count === 0)
+    item?.statusCounts?.every((statusCount: any) => statusCount?.count === 0),
   );
   const headerName = `Hi, ${getProfileData?.firstName || ''}`;
   // getSettingData?.gamification
@@ -2391,7 +2391,7 @@ const Home = (props: any) => {
             borderWidth: 1,
             borderColor: COLORS.WHITE,
             borderRadius: 50,
-            padding: 6
+            padding: 6,
           }}>
           <Image
             borderRadius={40}

@@ -1,0 +1,3079 @@
+<!-- <!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Enhanced SCORM Wrapper with Completion Status</title>
+  <script src="scorm-again.min.js"></script>
+  <script>
+    // Global variables
+    let scormAPI = null;
+    let contentLoaded = false;
+    let lastAction = '';
+    let debugMode = true;
+    let apiCheckInterval = null;
+    let completionStatus = 'not attempted';
+
+    // Send message to React Native
+    function sendToReactNative(data) {
+      try {
+        if (window.ReactNativeWebView) {
+          window.ReactNativeWebView.postMessage(JSON.stringify(data));
+          log("Message sent to RN: " + JSON.stringify(data).substring(0, 100));
+        } else {
+          log("ReactNativeWebView not available");
+        }
+      } catch (err) {
+        log("Error sending to React Native: " + err.message);
+      }
+    }
+
+    // Logging function
+    function log(message) {
+      console.log(message);
+      const statusEl = document.getElementById('status');
+      if (statusEl) {
+        statusEl.innerText = message;
+      }
+
+      // Also log to debug area
+      const logEl = document.getElementById('logOutput');
+      if (logEl && debugMode) {
+        const entry = document.createElement('div');
+        entry.className = 'log-entry';
+        entry.innerText = new Date().toLocaleTimeString() + ': ' + message;
+        logEl.appendChild(entry);
+        logEl.scrollTop = logEl.scrollHeight;
+      }
+    }
+
+    // Update completion status display
+    function updateCompletionStatus(status) {
+      // Don't default to 'unknown' - keep current status if not provided
+      if (status) {
+        completionStatus = status;
+      }
+
+      const completionEl = document.getElementById('completionStatus');
+      if (completionEl) {
+        completionEl.innerText = completionStatus;
+
+        // Update status class for styling
+        completionEl.className = 'completion-status';
+        if (completionStatus === 'completed' || completionStatus === 'passed') {
+          completionEl.classList.add('status-completed');
+        } else if (completionStatus === 'incomplete' || completionStatus === 'failed') {
+          completionEl.classList.add('status-incomplete');
+        } else if (completionStatus === 'not attempted') {
+          completionEl.classList.add('status-not-attempted');
+        }
+      }
+
+      // Log whenever status changes
+      log("Completion status updated to: " + completionStatus);
+    }
+
+    // Force a manual status update
+    function forceStatusUpdate(event) {
+      if (scormAPI) {
+        const status = scormAPI.getValue('cmi.core.lesson_status');
+        log("Current lesson status: " + status);
+
+        // Only update if we got a valid status
+        if (status && status !== "") {
+          updateCompletionStatus(status);
+        }
+
+        // Also check for completion in suspend_data if no explicit status
+        if ((!status || status === "") && scormAPI.getValue('cmi.suspend_data')) {
+          const suspendData = scormAPI.getValue('cmi.suspend_data');
+          const parsedStatus = parseForCompletionStatus(suspendData);
+          if (parsedStatus) {
+            updateCompletionStatus(parsedStatus);
+          }
+        }
+
+        sendToReactNative({
+          type: 'SCORM_MANUAL_CHECK',
+          lessonStatus: completionStatus,
+          location: scormAPI.getValue('cmi.core.lesson_location')
+        });
+      } else {
+        log("Cannot check status: API not available");
+      }
+    }
+
+ // Add this global variable declaration at the top with other globals
+let scormAgainAPI = null;
+// Initialize the SCORM API with SCORM-again
+   function initializeSCORM(config = {}) {
+  try {
+    log("Initializing Dynamic SCORM API...");
+    
+    // Dynamic configuration with defaults
+    const scormConfig = {
+      studentId: config.studentId || 'default_student',
+      studentName: config.studentName || 'Default Student',
+      lessonLocation: config.lessonLocation || '',
+      credit: config.credit || 'credit',
+      lessonStatus: config.lessonStatus || 'not attempted',
+      entry: config.entry || 'ab-initio',
+      lessonMode: config.lessonMode || 'normal',
+      autocommit: config.autocommit !== undefined ? config.autocommit : true,
+      debug: config.debug !== undefined ? config.debug : true,
+      customParameters: config.customParameters || {},
+      onStatusChange: config.onStatusChange || null,
+      onNavigation: config.onNavigation || null,
+      ...config
+    };
+    
+    // Dynamic data store
+    const scormData = {
+      'cmi.core.student_id': scormConfig.studentId,
+      'cmi.core.student_name': scormConfig.studentName,
+      'cmi.core.lesson_location': scormConfig.lessonLocation,
+      'cmi.core.credit': scormConfig.credit,
+      'cmi.core.lesson_status': scormConfig.lessonStatus,
+      'cmi.core.entry': scormConfig.entry,
+      'cmi.core.lesson_mode': scormConfig.lessonMode,
+      'cmi.suspend_data': '',
+      'cmi.core.score.raw': '',
+      'cmi.core.score.max': '',
+      'cmi.core.score.min': '',
+      'cmi.core.total_time': '0000:00:00.00',
+      'cmi.core.session_time': '0000:00:00.00',
+      ...scormConfig.customParameters
+    };
+    
+    // Update completion status dynamically
+    function updateCompletionStatus(status) {
+      scormData['cmi.core.lesson_status'] = status;
+      if (scormConfig.onStatusChange) {
+        scormConfig.onStatusChange(status);
+      }
+    }
+    
+    // Create a dynamic SCORM API
+    const dynamicAPI = {
+      LMSInitialize: function() {
+        log("Dynamic API call: LMSInitialize");
+        sendToReactNative({ 
+          type: 'SCORM_INIT_DIRECT',
+          config: scormConfig
+        });
+        return "true";
+      },
+      
+      LMSFinish: function() {
+        log("Dynamic API call: LMSFinish");
+        sendToReactNative({ 
+          type: 'SCORM_FINISH_DIRECT',
+          finalData: scormData
+        });
+        return "true";
+      },
+      
+      LMSCommit: function() {
+        log("Dynamic API call: LMSCommit");
+        sendToReactNative({ 
+          type: 'SCORM_COMMIT_DIRECT',
+          data: scormData
+        });
+        return "true";
+      },
+      
+      LMSGetValue: function(parameter) {
+        log("Dynamic API call: LMSGetValue - " + parameter);
+        
+        // Get value from dynamic data store
+        let value = scormData[parameter] || '';
+        
+        // Handle special cases dynamically
+        if (parameter.startsWith('cmi.interactions.')) {
+          // Parse interaction index and property
+          const parts = parameter.split('.');
+          const index = parts[2];
+          const property = parts.slice(3).join('.');
+          value = scormData[parameter] || getDefaultInteractionValue(property);
+        }
+        
+        sendToReactNative({ 
+          type: 'SCORM_GET_DIRECT', 
+          parameter: parameter,
+          value: value,
+          allData: scormConfig.debug ? scormData : undefined
+        });
+        
+        return value;
+      },
+      
+      LMSSetValue: function(parameter, value) {
+        log("Dynamic API call: LMSSetValue - " + parameter + " = " + value);
+        
+        // Store value in dynamic data store
+        scormData[parameter] = value;
+        
+        sendToReactNative({ 
+          type: 'SCORM_SET_DIRECT', 
+          parameter: parameter,
+          value: value,
+          allData: scormConfig.debug ? scormData : undefined
+        });
+        
+        // Handle navigation events
+        if (parameter === 'cmi.core.lesson_location' || 
+            parameter.startsWith('cmi.suspend_data')) {
+          
+          if (scormConfig.onNavigation) {
+            scormConfig.onNavigation(parameter, value);
+          }
+          
+          sendToReactNative({ 
+            type: 'SCORM_NAVIGATION', 
+            parameter: parameter,
+            value: value,
+            location: scormData['cmi.core.lesson_location']
+          });
+          
+          // Try to parse completion from suspend_data
+          if (parameter.startsWith('cmi.suspend_data')) {
+            const parsedStatus = parseForCompletionStatus(value);
+            if (parsedStatus) {
+              updateCompletionStatus(parsedStatus);
+              sendToReactNative({
+                type: 'COMPLETION_STATUS',
+                status: parsedStatus,
+                source: 'suspend_data_parsing',
+                suspendData: value
+              });
+            }
+          }
+        }
+        
+        // Handle status changes
+        if (parameter === 'cmi.core.lesson_status') {
+          updateCompletionStatus(value);
+          sendToReactNative({ 
+            type: 'SCORM_STATUS_CHANGE',
+            value: value,
+            previousStatus: scormData[parameter]
+          });
+          
+          sendToReactNative({ 
+            type: 'COMPLETION_STATUS',
+            status: value,
+            source: 'lesson_status'
+          });
+        }
+        
+        // Handle score updates
+        if (parameter.startsWith('cmi.core.score')) {
+          sendToReactNative({
+            type: 'SCORM_SCORE_UPDATE',
+            parameter: parameter,
+            value: value,
+            scores: {
+              raw: scormData['cmi.core.score.raw'],
+              max: scormData['cmi.core.score.max'],
+              min: scormData['cmi.core.score.min']
+            }
+          });
+        }
+        
+        // Auto-commit if enabled
+        if (scormConfig.autocommit) {
+          this.LMSCommit();
+        }
+        
+        return "true";
+      },
+      
+      LMSGetLastError: function() {
+        return "0";
+      },
+      
+      LMSGetErrorString: function(errorCode) {
+        const errorStrings = {
+          '0': 'No error',
+          '101': 'General exception',
+          '201': 'Invalid argument error',
+          '202': 'Element cannot have children',
+          '203': 'Element not an array - cannot have count',
+          '301': 'Not initialized',
+          '401': 'Not implemented error',
+          '402': 'Invalid set value, element is a keyword',
+          '403': 'Element is read only',
+          '404': 'Element is write only',
+          '405': 'Incorrect data type'
+        };
+        return errorStrings[errorCode] || 'Unknown error';
+      },
+      
+      LMSGetDiagnostic: function(errorCode) {
+        return "Diagnostic info for error: " + errorCode;
+      },
+      
+      // Additional utility methods
+      getAllData: function() {
+        return { ...scormData };
+      },
+      
+      updateConfig: function(newConfig) {
+        Object.assign(scormConfig, newConfig);
+        // Update data store with new values
+        Object.keys(newConfig).forEach(key => {
+          if (key.startsWith('cmi.')) {
+            scormData[key] = newConfig[key];
+          }
+        });
+      }
+    };
+    
+    // Helper function for interaction defaults
+    function getDefaultInteractionValue(property) {
+      const defaults = {
+        'id': '',
+        'type': 'choice',
+        'objectives._count': '0',
+        'timestamp': '',
+        'correct_responses._count': '0',
+        'weighting': '',
+        'student_response': '',
+        'result': '',
+        'latency': ''
+      };
+      return defaults[property] || '';
+    }
+    
+    // Set up the API
+    window.API = dynamicAPI;
+    
+    // Also set up SCORM-again with dynamic configuration
+    if (typeof Scorm12API !== 'undefined') {
+      scormAPI = new Scorm12API({
+        autocommit: scormConfig.autocommit,
+        debug: scormConfig.debug,
+        logLevel: scormConfig.debug ? 4 : 1,
+        
+        lmsCommit: function() {
+          log("SCORM API: LMSCommit called");
+          sendToReactNative({ 
+            type: 'SCORM_COMMIT', 
+            data: scormData,
+            config: scormConfig
+          });
+          return "true";
+        },
+        
+        lmsInitialize: function() {
+          log("SCORM API: LMSInitialize called");
+          sendToReactNative({ 
+            type: 'SCORM_INIT',
+            config: scormConfig
+          });
+          return "true";
+        },
+        
+        lmsFinish: function() {
+          log("SCORM API: LMSFinish called");
+          sendToReactNative({ 
+            type: 'SCORM_FINISH',
+            finalData: scormData
+          });
+          return "true";
+        },
+        
+        lmsGetValue: function(parameter) {
+          return dynamicAPI.LMSGetValue(parameter);
+        },
+        
+        lmsSetValue: function(parameter, value) {
+          return dynamicAPI.LMSSetValue(parameter, value);
+        }
+      });
+    }
+    
+    log("Dynamic SCORM APIs initialized with config:", scormConfig);
+    
+    // Notify that API is ready with configuration
+    sendToReactNative({ 
+      type: 'SCORM_API_READY',
+      config: scormConfig,
+      dataStructure: Object.keys(scormData)
+    });
+    
+    return dynamicAPI; // Return the API for external use
+    
+  } catch (err) {
+    log("Failed to initialize Dynamic SCORM API: " + err.message);
+    throw err;
+  }
+}
+// Load the SCORM content
+    async function loadContent() {
+      try {
+        log("Loading content...");
+        const entryPath = './index.html';
+        log("Loading content from: " + entryPath);
+        document.getElementById('contentFrame').src = entryPath;
+        contentLoaded = true;
+      } catch (err) {
+        log("Error loading content: " + err.message);
+      }
+    }
+
+    // Setup message listener for iframe communication
+    function setupMessageListener() {
+      window.addEventListener('message', function (event) {
+        log("Received message from iframe: " + JSON.stringify(event.data).substring(0, 100));
+        sendToReactNative({
+          type: 'IFRAME_MESSAGE',
+          data: event.data
+        });
+      });
+
+      log("Message listener set up");
+    }
+
+    // Receive messages from React Native
+    function setupReactNativeListener() {
+      window.addEventListener('message', function (event) {
+        if (event.data && typeof event.data === 'string') {
+          try {
+            const data = JSON.parse(event.data);
+            log("Received message from React Native: " + JSON.stringify(data).substring(0, 100));
+
+            // Handle commands from React Native
+            if (data.command === 'terminate') {
+              terminateSCORM();
+            } else if (data.command === 'status') {
+              forceStatusUpdate();
+            } else if (data.command === 'checkAPI') {
+              checkAPIObjects();
+            }
+          } catch (e) {
+            log("Error processing RN message: " + e.message);
+          }
+        }
+      });
+      log("React Native listener set up");
+    }
+
+    // Make sure the API is exposed properly to the iframe
+    function checkAPIObjects() {
+      try {
+        const frame = document.getElementById('contentFrame');
+        const frameWindow = frame.contentWindow || frame.contentDocument.defaultView;
+
+        if (!frameWindow) {
+          log("ERROR: Cannot access content frame window");
+          return;
+        }
+
+        let report = {
+          topWindow: !!window.API,
+          frameWindow: !!frameWindow.API,
+          topWindowScormAgain: !!window.API && typeof window.API.LMSInitialize === 'function',
+          frameWindowScormAgain: !!frameWindow.API && typeof frameWindow.API.LMSInitialize === 'function'
+        };
+
+        log("API availability check: " + JSON.stringify(report));
+
+        sendToReactNative({
+          type: 'API_CHECK',
+          data: report
+        });
+
+        // Try to fix if needed
+        if (!frameWindow.API) {
+          log("Injecting API into frame window");
+          frameWindow.API = window.API;
+
+          // Force an early initialize call
+          if (frameWindow.API && typeof frameWindow.API.LMSInitialize === 'function') {
+            log("Auto-calling LMSInitialize");
+            frameWindow.API.LMSInitialize("");
+          }
+        }
+      } catch (err) {
+        log("Error checking API objects: " + err.message);
+      }
+    }
+
+    // Extract completion status from suspend_data if needed
+    function parseForCompletionStatus(data) {
+      // This is a simplified parser - many SCORM packages encode completion
+      // information in suspend_data in custom formats
+      // You may need to adapt this based on your specific SCORM content
+
+      if (!data) return null;
+
+      try {
+        // Look for SCORM 1.2 common patterns
+        // Look for percentage patterns
+        if (data.includes('percentComplete')) {
+          const match = data.match(/percentComplete[=:]\s*(\d+)/i);
+          if (match && match[1]) {
+            const percent = parseInt(match[1]);
+            return percent >= 100 ? 'completed' : 'incomplete';
+          }
+        }
+
+        // Look for direct completion flags
+        if (data.includes('complete=true') || data.includes('completed=true') ||
+          data.includes('"complete":true') || data.includes('"completed":true')) {
+          return 'completed';
+        }
+
+        // Look for "status:completed" pattern
+        if (data.includes('status:completed') || data.includes('status=completed') ||
+          data.includes('"status":"completed"')) {
+          return 'completed';
+        }
+
+        // Look for slides/screens completion pattern (common in many packages)
+        const viewedSlideMatch = data.match(/viewed[Ss]lides?[=:]\s*(\d+)\/(\d+)/);
+        if (viewedSlideMatch && viewedSlideMatch[1] && viewedSlideMatch[2]) {
+          if (parseInt(viewedSlideMatch[1]) >= parseInt(viewedSlideMatch[2])) {
+            return 'completed';
+          } else if (parseInt(viewedSlideMatch[1]) > 0) {
+            return 'incomplete';
+          }
+        }
+
+        // Analyze the data you shared earlier, it looks like an encoded SCORM package
+        if (data.includes('MlNITD') && data.includes('pSDBI') && data.includes('CuED')) {
+          if (data.includes('fPDefault') && data.includes('Student')) {
+            // This is likely an Articulate or similar SCORM package
+            // Many use specific patterns in the encoded strings
+            if (data.includes('completed') || data.includes('passed')) {
+              return 'completed';
+            } else if (data.includes('incomplete') || data.includes('failed')) {
+              return 'incomplete';
+            }
+          }
+        }
+
+        // Slide47 pattern from your data
+        if (data.includes('Slide_47') || data.includes('slide_47')) {
+          // This appears to be a specific slide - if it's near the end, it might
+          // indicate completion or near-completion
+          return 'incomplete'; // Conservatively mark as incomplete
+        }
+      } catch (err) {
+        log("Error parsing suspend_data: " + err.message);
+      }
+
+      return null;
+    }
+
+    // Handle content frame load
+    function handleFrameLoad() {
+      log("Content frame loaded!");
+
+      try {
+        const frame = document.getElementById('contentFrame');
+        const frameWindow = frame.contentWindow || frame.contentDocument.defaultView;
+
+        // Make SCORM API available in the iframe
+        if (frameWindow) {
+          // Direct API
+          frameWindow.API = window.API;
+
+          // Make the wrapper available too in case content needs it
+          frameWindow.parent = window;
+
+          log("SCORM API injected into content frame");
+
+        } else {
+          log("Failed to access content frame window");
+        }
+      } catch (err) {
+        log("Error handling frame load: " + err.message);
+      }
+    }
+
+    // Manual function to terminate SCORM session
+    function terminateSCORM() {
+      if (window.API) {
+        log("Manually terminating SCORM session");
+
+        // Before terminating, make sure to record final status
+        forceStatusUpdate();
+
+        const result = window.API.LMSFinish('');
+        log("LMSFinish directly called with result: " + result);
+        sendToReactNative({
+          type: 'SCORM_TERMINATED',
+          result: result,
+          finalStatus: completionStatus
+        });
+      } else {
+        log("Cannot terminate: SCORM API not initialized");
+      }
+    }
+    // Error handling
+    window.onerror = function (message, source, lineno, colno, error) {
+      log("JS Error: " + message + " at " + source + ":" + lineno);
+      sendToReactNative({
+        type: 'ERROR',
+        message: message,
+        source: source,
+        line: lineno
+      });
+      return true;
+    };
+
+    // Initialize everything when page loads
+    document.addEventListener('DOMContentLoaded', function () {
+      log("DOM loaded, starting initialization");
+
+      // Initialize the completion status early
+      updateCompletionStatus('not attempted');
+
+      // Set up iframe onload handler
+      const frame = document.getElementById('contentFrame');
+      frame.onload = handleFrameLoad;
+
+      // Initialize systems in order
+      initializeSCORM();
+      setupMessageListener();
+      setupReactNativeListener();
+      loadContent();
+      log("Initialization complete");
+    });
+
+  </script>
+  <style>
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      width: 100%;
+      overflow: hidden;
+      font-family: system-ui, -apple-system, sans-serif;
+    }
+
+    #status {
+      padding: 5px;
+      font-family: monospace;
+      font-size: 12px;
+      background-color: #f0f0f0;
+      height: 20px;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
+
+    iframe {
+      border: none;
+      width: 100%;
+      height: 60%;
+      display: block;
+      background-color: white;
+    }
+
+    #debugPanel {
+      display: block;
+      height: 35%;
+      background-color: #f8f8f8;
+      border-top: 1px solid #ddd;
+      overflow: auto;
+      padding: 5px;
+    }
+
+    #logOutput {
+      height: 75%;
+      overflow-y: auto;
+      background: #fff;
+      border: 1px solid #ddd;
+      padding: 5px;
+      font-family: monospace;
+      font-size: 11px;
+    }
+
+    .log-entry {
+      padding: 2px 0;
+      border-bottom: 1px solid #eee;
+      word-break: break-all;
+    }
+
+    button {
+      margin: 3px;
+      padding: 5px 8px;
+    }
+
+    .button-row {
+      margin-top: 5px;
+      margin-bottom: 5px;
+    }
+
+    .completion-wrapper {
+      padding: 8px;
+      background-color: #eee;
+      border-radius: 4px;
+      margin-bottom: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .completion-label {
+      font-weight: bold;
+    }
+
+    .completion-status {
+      padding: 3px 8px;
+      border-radius: 3px;
+      font-weight: bold;
+    }
+
+    .status-completed {
+      background-color: #d4edda;
+      color: #155724;
+    }
+
+    .status-incomplete,
+    .status-failed {
+      background-color: #f8d7da;
+      color: #721c24;
+    }
+
+    .status-not-attempted {
+      background-color: #fff3cd;
+      color: #856404;
+    }
+
+    /* Make error messages stand out more */
+    .log-entry:contains("Error") {
+      color: #721c24;
+      font-weight: bold;
+    }
+  </style>
+</head>
+
+<body>
+  <iframe id="contentFrame" allow="autoplay; fullscreen"></iframe>
+</body>
+
+</html> -->
+
+
+
+<!-- <!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>SCORM Wrapper</title>
+  <script src="scorm-again.min.js"></script>
+  <script>
+    // Core variables
+    let scormAPI = null;
+    let scormAgainAPI = null;
+    let completionStatus = 'not attempted';
+    let libraryLoaded = false;
+    let contentPath = './index.html'; // Default path
+
+    // Simple logging helper
+    function log(message) {
+      console.log('[SCORM Wrapper] ' + message);
+    }
+
+    // Send data to React Native
+    function sendToReactNative(data) {
+      try {
+        if (window.ReactNativeWebView) {
+          window.ReactNativeWebView.postMessage(JSON.stringify(data));
+        }
+      } catch (err) {
+        log("Error sending to RN: " + err.message);
+      }
+    }
+
+    // Update completion status
+    function updateCompletionStatus(status) {
+      if (status) {
+        completionStatus = status;
+        // Update SCORM Again API if available
+        if (scormAgainAPI && scormAgainAPI.cmi) {
+          try {
+            scormAgainAPI.cmi.completion_status = status;
+          } catch (err) {
+            log("Error updating SCORM Again completion status: " + err.message);
+          }
+        }
+        // Inform React Native about status change
+        sendToReactNative({
+          type: 'COMPLETION_STATUS',
+          status: completionStatus,
+          source: 'handler'
+        });
+      }
+    }
+
+    // Parse completion info from suspend_data
+    function parseForCompletionStatus(data) {
+      if (!data) return null;
+
+      try {
+        // Percentage patterns
+        if (data.includes('percentComplete')) {
+          const match = data.match(/percentComplete[=:]\s*(\d+)/i);
+          if (match && match[1]) {
+            const percent = parseInt(match[1]);
+            return percent >= 100 ? 'completed' : 'incomplete';
+          }
+        }
+
+        // Direct completion flags
+        if (data.includes('complete=true') || data.includes('completed=true') ||
+          data.includes('"complete":true') || data.includes('"completed":true')) {
+          return 'completed';
+        }
+
+        // Status markers
+        if (data.includes('status:completed') || data.includes('status=completed') ||
+          data.includes('"status":"completed"')) {
+          return 'completed';
+        }
+
+        // Slide completion pattern
+        const viewedSlideMatch = data.match(/viewed[Ss]lides?[=:]\s*(\d+)\/(\d+)/);
+        if (viewedSlideMatch && viewedSlideMatch[1] && viewedSlideMatch[2]) {
+          if (parseInt(viewedSlideMatch[1]) >= parseInt(viewedSlideMatch[2])) {
+            return 'completed';
+          } else if (parseInt(viewedSlideMatch[1]) > 0) {
+            return 'incomplete';
+          }
+        }
+      } catch (err) {
+        log("Error parsing data: " + err.message);
+      }
+
+      return null;
+    }
+
+    // Get default value as ultimate fallback
+    function getDefaultValue(parameter) {
+      switch (parameter) {
+        case 'cmi.core.student_id': return 'default_student';
+        case 'cmi.core.student_name': return 'Default Student';
+        case 'cmi.core.lesson_location': return '';
+        case 'cmi.core.credit': return 'credit';
+        case 'cmi.core.lesson_status': return completionStatus;
+        case 'cmi.core.entry': return 'ab-initio';
+        case 'cmi.core.lesson_mode': return 'normal';
+        case 'cmi.core.score.raw': return '';
+        case 'cmi.core.score.max': return '';
+        case 'cmi.core.score.min': return '';
+        case 'cmi.core.total_time': return '0000:00:00.00';
+        case 'cmi.core.session_time': return '0000:00:00.00';
+        case 'cmi.suspend_data': return '';
+        default: return '';
+      }
+    }
+
+    // Check what SCORM Again constructors are available
+    function detectSCORMAgainAPI() {
+      log("Checking available SCORM Again constructors...");
+
+      // Check common constructor names
+      const possibleConstructors = [
+        'Scorm12API',
+        'Scorm2004API',
+        'ScormAPI',
+        'SCORM12API',
+        'SCORM2004API',
+        'SCORMAPI'
+      ];
+
+      for (const constructor of possibleConstructors) {
+        if (window[constructor]) {
+          log("Found constructor: " + constructor);
+          try {
+            scormAgainAPI = new window[constructor]({
+              autocommit: false,
+              autocommitSeconds: 0,
+              logLevel: 1
+            });
+            log("Successfully created SCORM Again API using: " + constructor);
+            return true;
+          } catch (err) {
+            log("Failed to create API with " + constructor + ": " + err.message);
+          }
+        }
+      }
+
+      log("No SCORM Again constructor found, using basic implementation");
+      return false;
+    }
+
+    // Initialize SCORM API
+    function initializeSCORM() {
+      try {
+        log("Initializing SCORM API...");
+
+        // Try to detect and initialize SCORM Again
+        libraryLoaded = detectSCORMAgainAPI();
+
+        // Create the basic SCORM API object
+        const basicAPI = {
+          LMSInitialize: function (parameter) {
+            log("LMSInitialize called");
+
+            let initResult = "true";
+
+            // Initialize SCORM Again API if available
+            if (scormAgainAPI && scormAgainAPI.lmsInitialize) {
+              try {
+                initResult = scormAgainAPI.lmsInitialize(parameter);
+                log("SCORM Again Initialize result: " + initResult);
+
+                // Request initial data from React Native to populate CMI
+                sendToReactNative({
+                  type: 'REQUEST_INITIAL_CMI_DATA'
+                });
+
+              } catch (err) {
+                log("Error during SCORM Again initialization: " + err.message);
+                initResult = "false";
+              }
+            }
+
+            sendToReactNative({
+              type: 'SCORM_INIT_DIRECT',
+              success: initResult === "true",
+              hasScormAgain: !!scormAgainAPI
+            });
+
+            return initResult;
+          },
+
+          LMSFinish: function (parameter) {
+            log("LMSFinish called");
+
+            // Finish SCORM Again API if available
+            if (scormAgainAPI && scormAgainAPI.lmsFinish) {
+              try {
+                const result = scormAgainAPI.lmsFinish(parameter);
+                log("SCORM Again Finish result: " + result);
+              } catch (err) {
+                log("Error during SCORM Again finish: " + err.message);
+              }
+            }
+
+            sendToReactNative({ type: 'SCORM_FINISH_DIRECT' });
+            return "true";
+          },
+
+          LMSCommit: function (parameter) {
+            log("LMSCommit called");
+
+            let scormAgainResult = "true";
+
+            // Commit SCORM Again API if available
+            if (scormAgainAPI && scormAgainAPI.lmsCommit) {
+              try {
+                scormAgainResult = scormAgainAPI.lmsCommit(parameter);
+                log("SCORM Again Commit result: " + scormAgainResult);
+
+                // Send all current CMI data to React Native for persistence
+                const cmiData = scormAgainAPI.cmi || {};
+                sendToReactNative({
+                  type: 'SCORM_COMMIT_DATA',
+                  cmiData: cmiData,
+                  success: scormAgainResult === "true"
+                });
+
+              } catch (err) {
+                log("Error during SCORM Again commit: " + err.message);
+                scormAgainResult = "false";
+              }
+            }
+
+            sendToReactNative({
+              type: 'SCORM_COMMIT_DIRECT',
+              success: scormAgainResult === "true"
+            });
+
+            return scormAgainResult;
+          },
+
+          LMSGetValue: function (parameter) {
+            log("LMSGetValue called for: " + parameter);
+
+            let value = "";
+            let source = "default";
+
+            // If SCORM Again API is available, get from there first
+            if (scormAgainAPI && scormAgainAPI.lmsGetValue) {
+              try {
+                // Use SCORM Again's native getValue method
+                value = scormAgainAPI.lmsGetValue(parameter);
+                source = "scorm-again";
+                log("Got value from SCORM Again: " + parameter + " = " + value);
+              } catch (err) {
+                log("Error getting from SCORM Again: " + err.message);
+              }
+            }
+
+            // If still no value, use defaults
+            if (!value && value !== 0) {
+              value = getDefaultValue(parameter);
+              source = "default";
+            }
+
+            // Notify React Native
+            sendToReactNative({
+              type: 'SCORM_GET_DIRECT',
+              parameter: parameter,
+              value: value,
+              source: source
+            });
+
+            log("Returning value for " + parameter + ": " + value + " (source: " + source + ")");
+            return value;
+          },
+
+          LMSSetValue: function (parameter, value) {
+            log("LMSSetValue called: " + parameter + " = " + value);
+
+            let scormAgainResult = false;
+
+            // Set in SCORM Again API first if available
+            if (scormAgainAPI && scormAgainAPI.lmsSetValue) {
+              try {
+                // Use SCORM Again's native setValue method
+                scormAgainResult = scormAgainAPI.lmsSetValue(parameter, value);
+                log("SCORM Again setValue result: " + scormAgainResult);
+              } catch (err) {
+                log("Error setting in SCORM Again: " + err.message);
+              }
+            }
+
+            sendToReactNative({
+              type: 'SCORM_SET_DIRECT',
+              parameter: parameter,
+              value: value,
+              scormAgainUpdated: scormAgainResult
+            });
+
+            // Handle special parameters
+            if (parameter === 'cmi.core.lesson_location' || parameter.startsWith('cmi.suspend_data')) {
+              sendToReactNative({
+                type: 'SCORM_NAVIGATION',
+                parameter: parameter,
+                value: value
+              });
+
+              // Parse completion status from suspend_data
+              if (parameter.startsWith('cmi.suspend_data')) {
+                const parsedStatus = parseForCompletionStatus(value);
+                if (parsedStatus) {
+                  updateCompletionStatus(parsedStatus);
+                }
+              }
+            }
+
+            // Handle interactions (quiz questions, etc.)
+            if (parameter.startsWith('cmi.interactions')) {
+              sendToReactNative({
+                type: 'SCORM_INTERACTION',
+                parameter: parameter,
+                value: value
+              });
+            }
+
+            // Handle explicit completion status
+            if (parameter === 'cmi.core.lesson_status') {
+              updateCompletionStatus(value);
+              sendToReactNative({
+                type: 'SCORM_COMPLETION',
+                value: value
+              });
+            }
+
+            // Handle score updates
+            if (parameter.startsWith('cmi.core.score')) {
+              sendToReactNative({
+                type: 'SCORM_SCORE_UPDATE',
+                parameter: parameter,
+                value: value
+              });
+            }
+
+            return "true";
+          },
+
+          LMSGetLastError: function () {
+            if (scormAgainAPI && scormAgainAPI.lmsGetLastError) {
+              try {
+                return scormAgainAPI.lmsGetLastError();
+              } catch (err) {
+                log("Error getting last error: " + err.message);
+              }
+            }
+            return "0";
+          },
+
+          LMSGetErrorString: function (errorCode) {
+            if (scormAgainAPI && scormAgainAPI.lmsGetErrorString) {
+              try {
+                return scormAgainAPI.lmsGetErrorString(errorCode);
+              } catch (err) {
+                log("Error getting error string: " + err.message);
+              }
+            }
+            return "No error";
+          },
+
+          LMSGetDiagnostic: function (errorCode) {
+            if (scormAgainAPI && scormAgainAPI.lmsGetDiagnostic) {
+              try {
+                return scormAgainAPI.lmsGetDiagnostic(errorCode);
+              } catch (err) {
+                log("Error getting diagnostic: " + err.message);
+              }
+            }
+            return "No diagnostic";
+          }
+        };
+
+        // Set up the SCORM API
+        window.API = basicAPI;
+        window.API_1484_11 = basicAPI; // SCORM 2004 compatibility
+
+        // Notify React Native that API is ready
+        sendToReactNative({
+          type: 'SCORM_API_READY',
+          hasScormAgain: !!scormAgainAPI,
+          libraryLoaded: libraryLoaded,
+          scormVersion: scormAgainAPI ? (scormAgainAPI.version || 'unknown') : 'none'
+        });
+
+        log("SCORM API initialized successfully");
+
+      } catch (err) {
+        log("Failed to initialize SCORM API: " + err.message);
+        sendToReactNative({
+          type: 'SCORM_INIT_ERROR',
+          error: err.message
+        });
+      }
+    }
+
+    // Handle content frame load
+    function handleFrameLoad() {
+      log("Content frame load event triggered");
+
+      try {
+        const frame = document.getElementById('contentFrame');
+        if (!frame) {
+          log("ERROR: contentFrame not found");
+          return;
+        }
+
+        // Check if the iframe actually loaded content
+        try {
+          const frameWindow = frame.contentWindow || frame.contentDocument.defaultView;
+
+          if (frameWindow) {
+            // Inject API into iframe
+            frameWindow.API = window.API;
+            frameWindow.API_1484_11 = window.API_1484_11;
+            frameWindow.parent = window;
+
+            // Also inject SCORM Again API if available (safely)
+            if (scormAgainAPI) {
+              try {
+                frameWindow.scormAgainAPI = scormAgainAPI;
+              } catch (err) {
+                log("Could not inject scormAgainAPI into iframe: " + err.message);
+              }
+            }
+
+            sendToReactNative({
+              type: 'CONTENT_LOADED',
+              contentPath: contentPath,
+              hasAPI: !!frameWindow.API
+            });
+            log("Content loaded successfully and API injected");
+          } else {
+            log("ERROR: Could not access iframe window");
+            sendToReactNative({
+              type: 'CONTENT_LOAD_ERROR',
+              error: 'Could not access iframe window'
+            });
+          }
+        } catch (crossOriginError) {
+          // This might happen with cross-origin content
+          log("Cross-origin access error (this might be normal): " + crossOriginError.message);
+          sendToReactNative({
+            type: 'CONTENT_LOADED',
+            contentPath: contentPath,
+            crossOriginRestricted: true
+          });
+        }
+      } catch (err) {
+        log("Error handling frame load: " + err.message);
+        sendToReactNative({
+          type: 'CONTENT_LOAD_ERROR',
+          error: err.message
+        });
+      }
+    }
+
+    // Listen for messages from React Native to set content path
+    window.addEventListener('message', function (event) {
+      try {
+        const data = JSON.parse(event.data);
+
+        if (data.type === 'SET_CONTENT_PATH' && data.path) {
+          log("Received content path from React Native: " + data.path);
+          contentPath = data.path;
+
+          const frame = document.getElementById('contentFrame');
+          if (frame) {
+            frame.src = contentPath;
+          }
+        }
+
+        if (data.type === 'INIT_SCORM_DATA' && data.cmiData && scormAgainAPI && scormAgainAPI.cmi) {
+          // Initialize SCORM Again API with data from React Native
+          log("Initializing SCORM Again with data from React Native");
+
+          const cmiData = data.cmiData;
+
+          // Populate SCORM Again CMI with the received data
+          Object.keys(cmiData).forEach(key => {
+            if (cmiData[key] !== undefined && cmiData[key] !== null) {
+              try {
+                // Use dot notation to set nested properties
+                const keys = key.split('.');
+                let current = scormAgainAPI.cmi;
+
+                for (let i = 0; i < keys.length - 1; i++) {
+                  if (!current[keys[i]]) {
+                    current[keys[i]] = {};
+                  }
+                  current = current[keys[i]];
+                }
+
+                current[keys[keys.length - 1]] = cmiData[key];
+                log("Set CMI data: " + key + " = " + cmiData[key]);
+
+              } catch (err) {
+                log("Error setting CMI data: " + key + " = " + cmiData[key] + ", Error: " + err.message);
+              }
+            }
+          });
+
+          log("CMI data initialization complete");
+        }
+
+        if (data.type === 'UPDATE_CMI_VALUE' && data.parameter && scormAgainAPI && scormAgainAPI.lmsSetValue) {
+          // Update specific CMI value
+          try {
+            scormAgainAPI.lmsSetValue(data.parameter, data.value);
+            log("Updated CMI value: " + data.parameter + " = " + data.value);
+          } catch (err) {
+            log("Error updating CMI value: " + err.message);
+          }
+        }
+
+      } catch (err) {
+        log("Error handling message from React Native: " + err.message);
+      }
+    });
+
+    // Error handling
+    window.onerror = function (message, source, lineno, colno, error) {
+      log("JavaScript Error: " + message);
+      sendToReactNative({
+        type: 'ERROR',
+        message: message,
+        source: source,
+        line: lineno,
+        column: colno
+      });
+      return true;
+    };
+
+    // THE ONLY CHANGE - COPY EXACT INITIALIZATION FROM WORKING VERSION
+    document.addEventListener('DOMContentLoaded', function() {
+      log("DOM loaded, starting initialization");
+      
+      // Initialize the completion status early
+      updateCompletionStatus('not attempted');
+      
+      // Set up iframe onload handler
+      const frame = document.getElementById('contentFrame');
+      frame.onload = handleFrameLoad;
+      
+      // Initialize systems in order
+      initializeSCORM();
+      
+      // LOAD CONTENT IMMEDIATELY - EXACTLY LIKE WORKING VERSION
+      log("Loading content from: " + contentPath);
+      document.getElementById('contentFrame').src = contentPath;
+      
+      log("Initialization complete");
+    });
+
+  </script>
+  <style>
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      width: 100%;
+      overflow: hidden;
+    }
+
+    iframe {
+      border: none;
+      width: 100%;
+      height: 100vh;
+      display: block;
+      background-color: white;
+    }
+  </style>
+</head>
+
+<body>
+  <iframe id="contentFrame" allow="autoplay; fullscreen"></iframe>
+</body>
+
+
+// Get default value as ultimate fallback
+// function getDefaultValue(parameter) {
+//   switch(parameter) {
+//     case 'cmi.core.student_id': return 'default_student';
+//     case 'cmi.core.student_name': return 'Default Student';
+//     case 'cmi.core.lesson_location': return '';
+//     case 'cmi.core.credit': return 'credit';
+//     case 'cmi.core.lesson_status': return completionStatus;
+//     case 'cmi.core.entry': return 'ab-initio';
+//     case 'cmi.core.lesson_mode': return 'normal';
+//     case 'cmi.core.score.raw': return '';
+//     case 'cmi.core.score.max': return '';
+//     case 'cmi.core.score.min': return '';
+//     case 'cmi.core.total_time': return '0000:00:00.00';
+//     case 'cmi.core.session_time': return '0000:00:00.00';
+//     case 'cmi.suspend_data': return '';
+//     default: return '';
+//   }
+// }
+
+// Initialize SCORM API (Fixed Version)
+// function initializeSCORM() {
+//   debugger
+//   try {
+//     log("Initializing SCORM API...");
+    
+//     // Initialize SCORM Again if available (using the correct reference)
+//     if (typeof Scorm12API !== 'undefined') {
+//       scormAgainAPI = new Scorm12API({
+//         autocommit: false, // We'll handle commits manually
+//         autocommitSeconds: 0,
+//         logLevel: 1
+//       });
+//       log("SCORM 1.2 API initialized with SCORM Again");
+//     } else if (typeof Scorm2004API !== 'undefined') {
+//       scormAgainAPI = new Scorm2004API({
+//         autocommit: false, // We'll handle commits manually
+//         autocommitSeconds: 0,
+//         logLevel: 1
+//       });
+//       log("SCORM 2004 API initialized with SCORM Again");
+//     } else {
+//       log("SCORM Again library not found, using fallback");
+//     }
+    
+//     // Create the basic SCORM API object
+//     const basicAPI = {
+//       LMSInitialize: function(parameter) {
+//         log("LMSInitialize called");
+        
+//         let initResult = "true";
+        
+//         // Initialize SCORM Again API if available
+//         if (scormAgainAPI) {
+//           try {
+//             initResult = scormAgainAPI.lmsInitialize(parameter);
+//             log("SCORM Again Initialize result: " + initResult);
+            
+//             // Request initial data from React Native to populate CMI
+//             sendToReactNative({ 
+//               type: 'REQUEST_INITIAL_CMI_DATA'
+//             });
+            
+//           } catch (err) {
+//             log("Error during SCORM Again initialization: " + err.message);
+//             initResult = "false";
+//           }
+//         }
+        
+//         sendToReactNative({ 
+//           type: 'SCORM_INIT_DIRECT',
+//           success: initResult === "true",
+//           hasScormAgain: !!scormAgainAPI
+//         });
+        
+//         return initResult;
+//       },
+      
+//       LMSFinish: function(parameter) {
+//         log("LMSFinish called");
+        
+//         // Finish SCORM Again API if available
+//         if (scormAgainAPI && scormAgainAPI.lmsFinish) {
+//           const result = scormAgainAPI.lmsFinish(parameter);
+//           log("SCORM Again Finish result: " + result);
+//         }
+        
+//         sendToReactNative({ type: 'SCORM_FINISH_DIRECT' });
+//         return "true";
+//       },
+      
+//       LMSCommit: function(parameter) {
+//         log("LMSCommit called");
+        
+//         let scormAgainResult = "true";
+        
+//         // Commit SCORM Again API if available
+//         if (scormAgainAPI) {
+//           try {
+//             scormAgainResult = scormAgainAPI.lmsCommit(parameter);
+//             log("SCORM Again Commit result: " + scormAgainResult);
+            
+//             // Send all current CMI data to React Native for persistence
+//             const cmiData = scormAgainAPI.cmi || {};
+//             sendToReactNative({
+//               type: 'SCORM_COMMIT_DATA',
+//               cmiData: cmiData,
+//               success: scormAgainResult === "true"
+//             });
+            
+//           } catch (err) {
+//             log("Error during SCORM Again commit: " + err.message);
+//             scormAgainResult = "false";
+//           }
+//         }
+        
+//         sendToReactNative({ 
+//           type: 'SCORM_COMMIT_DIRECT',
+//           success: scormAgainResult === "true"
+//         });
+        
+//         return scormAgainResult;
+//       },
+      
+//       LMSGetValue: function(parameter) {
+//         log("LMSGetValue called for: " + parameter);
+        
+//         let value = "";
+//         let source = "default";
+        
+//         // If SCORM Again API is available, get from there first
+//         if (scormAgainAPI) {
+//           try {
+//             // Use SCORM Again's native getValue method
+//             value = scormAgainAPI.lmsGetValue(parameter);
+//             source = "scorm-again";
+//             log("Got value from SCORM Again: " + parameter + " = " + value);
+//           } catch (err) {
+//             log("Error getting from SCORM Again: " + err.message);
+//           }
+//         }
+        
+//         // If still no value, use defaults
+//         // if (!value && value !== 0) {
+//         //   value = getDefaultValue(parameter);
+          
+//         //   source = "default";
+//         // }
+        
+//         // Notify React Native
+//         sendToReactNative({ 
+//           type: 'SCORM_GET_DIRECT', 
+//           parameter: parameter,
+//           value: value,
+//           source: source
+//         });
+        
+//         log("Returning value for " + parameter + ": " + value + " (source: " + source + ")");
+//         return value;
+//       },
+      
+//       LMSSetValue: function(parameter, value) {
+//         log("LMSSetValue called: " + parameter + " = " + value);
+        
+//         let scormAgainResult = false;
+        
+//         // Set in SCORM Again API first if available
+//         if (scormAgainAPI) {
+//           try {
+//             // Use SCORM Again's native setValue method
+//             scormAgainResult = scormAgainAPI.lmsSetValue(parameter, value);
+//             log("SCORM Again setValue result: " + scormAgainResult);
+//           } catch (err) {
+//             log("Error setting in SCORM Again: " + err.message);
+//           }
+//         }
+        
+//         sendToReactNative({ 
+//           type: 'SCORM_SET_DIRECT', 
+//           parameter: parameter,
+//           value: value,
+//           scormAgainUpdated: scormAgainResult
+//         });
+        
+//         // Handle special parameters
+//         if (parameter === 'cmi.core.lesson_location' || parameter.startsWith('cmi.suspend_data')) {
+//           sendToReactNative({ 
+//             type: 'SCORM_NAVIGATION', 
+//             parameter: parameter,
+//             value: value
+//           });
+          
+//           // Parse completion status from suspend_data
+//           if (parameter.startsWith('cmi.suspend_data')) {
+//             const parsedStatus = parseForCompletionStatus(value);
+//             if (parsedStatus) {
+//               updateCompletionStatus(parsedStatus);
+//             }
+//           }
+//         }
+        
+//         // Handle interactions (quiz questions, etc.)
+//         if (parameter.startsWith('cmi.interactions')) {
+//           sendToReactNative({ 
+//             type: 'SCORM_INTERACTION', 
+//             parameter: parameter,
+//             value: value
+//           });
+//         }
+        
+//         // Handle explicit completion status
+//         if (parameter === 'cmi.core.lesson_status') {
+//           updateCompletionStatus(value);
+//           sendToReactNative({ 
+//             type: 'SCORM_COMPLETION',
+//             value: value 
+//           });
+//         }
+        
+//         // Handle score updates
+//         if (parameter.startsWith('cmi.core.score')) {
+//           sendToReactNative({ 
+//             type: 'SCORM_SCORE_UPDATE',
+//             parameter: parameter,
+//             value: value 
+//           });
+//         }
+        
+//         return "true";
+//       },
+      
+//       LMSGetLastError: function() {
+//         if (scormAgainAPI && scormAgainAPI.lmsGetLastError) {
+//           return scormAgainAPI.lmsGetLastError();
+//         }
+//         return "0";
+//       },
+      
+//       LMSGetErrorString: function(errorCode) {
+//         if (scormAgainAPI && scormAgainAPI.lmsGetErrorString) {
+//           return scormAgainAPI.lmsGetErrorString(errorCode);
+//         }
+//         return "No error";
+//       },
+      
+//       LMSGetDiagnostic: function(errorCode) {
+//         if (scormAgainAPI && scormAgainAPI.lmsGetDiagnostic) {
+//           return scormAgainAPI.lmsGetDiagnostic(errorCode);
+//         }
+//         return "No diagnostic";
+//       }
+//     };
+    
+//     // Set up the SCORM API
+//     window.API = basicAPI;
+//     window.API_1484_11 = basicAPI; // SCORM 2004 compatibility
+    
+//     // Notify React Native that API is ready
+//     sendToReactNative({ 
+//       type: 'SCORM_API_READY',
+//       hasScormAgain: !!scormAgainAPI,
+//       scormVersion: scormAgainAPI ? (scormAgainAPI.version || 'unknown') : 'none'
+//     });
+    
+//     log("SCORM API initialized successfully");
+    
+//   } catch (err) {
+//     log("Failed to initialize SCORM API: " + err.message);
+//     sendToReactNative({
+//       type: 'SCORM_INIT_ERROR',
+//       error: err.message
+//     });
+//   }
+// }
+  
+
+</html> -->
+
+
+
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Enhanced SCORM Wrapper with Completion Status</title>
+  <script src="scorm-again.min.js"></script>
+  <script>
+    // Global variables
+    let scormAPI = null;
+    let contentLoaded = false;
+    let lastAction = '';
+    let debugMode = true;
+    let apiCheckInterval = null;
+    let completionStatus = 'not attempted';
+
+    // Send message to React Native
+    function sendToReactNative(data) {
+      try {
+        if (window.ReactNativeWebView) {
+          window.ReactNativeWebView.postMessage(JSON.stringify(data));
+          log("Message sent to RN: " + JSON.stringify(data).substring(0, 100));
+        } else {
+          log("ReactNativeWebView not available");
+        }
+      } catch (err) {
+        log("Error sending to React Native: " + err.message);
+      }
+    }
+
+    // Logging function
+    function log(message) {
+      console.log(message);
+      const statusEl = document.getElementById('status');
+      if (statusEl) {
+        statusEl.innerText = message;
+      }
+
+      // Also log to debug area
+      const logEl = document.getElementById('logOutput');
+      if (logEl && debugMode) {
+        const entry = document.createElement('div');
+        entry.className = 'log-entry';
+        entry.innerText = new Date().toLocaleTimeString() + ': ' + message;
+        logEl.appendChild(entry);
+        logEl.scrollTop = logEl.scrollHeight;
+      }
+    }
+
+    // Update completion status display
+    function updateCompletionStatus(status) {
+      // Don't default to 'unknown' - keep current status if not provided
+      if (status) {
+        completionStatus = status;
+      }
+
+      const completionEl = document.getElementById('completionStatus');
+      if (completionEl) {
+        completionEl.innerText = completionStatus;
+
+        // Update status class for styling
+        completionEl.className = 'completion-status';
+        if (completionStatus === 'completed' || completionStatus === 'passed') {
+          completionEl.classList.add('status-completed');
+        } else if (completionStatus === 'incomplete' || completionStatus === 'failed') {
+          completionEl.classList.add('status-incomplete');
+        } else if (completionStatus === 'not attempted') {
+          completionEl.classList.add('status-not-attempted');
+        }
+      }
+
+      // Log whenever status changes
+      log("Completion status updated to: " + completionStatus);
+    }
+
+    // Force a manual status update
+    function forceStatusUpdate(event) {
+      if (scormAPI) {
+        const status = scormAPI.getValue('cmi.core.lesson_status');
+        log("Current lesson status: " + status);
+
+        // Only update if we got a valid status
+        if (status && status !== "") {
+          updateCompletionStatus(status);
+        }
+
+        // Also check for completion in suspend_data if no explicit status
+        if ((!status || status === "") && scormAPI.getValue('cmi.suspend_data')) {
+          const suspendData = scormAPI.getValue('cmi.suspend_data');
+          const parsedStatus = parseForCompletionStatus(suspendData);
+          if (parsedStatus) {
+            updateCompletionStatus(parsedStatus);
+          }
+        }
+
+        sendToReactNative({
+          type: 'SCORM_MANUAL_CHECK',
+          lessonStatus: completionStatus,
+          location: scormAPI.getValue('cmi.core.lesson_location')
+        });
+      } else {
+        log("Cannot check status: API not available");
+      }
+    }
+
+ // Add this global variable declaration at the top with other globals
+let scormAgainAPI = null;
+// Initialize the SCORM API with SCORM-again
+//    function initializeSCORM(config = {}) {
+//   try {
+//     log("Initializing Dynamic SCORM API...");
+    
+//     // Dynamic configuration with defaults
+//     const scormConfig = {
+//       studentId: config.studentId || 'default_student',
+//       studentName: config.studentName || 'Default Student',
+//       lessonLocation: config.lessonLocation || '',
+//       credit: config.credit || 'credit',
+//       lessonStatus: config.lessonStatus || 'not attempted',
+//       entry: config.entry || 'ab-initio',
+//       lessonMode: config.lessonMode || 'normal',
+//       autocommit: config.autocommit !== undefined ? config.autocommit : true,
+//       debug: config.debug !== undefined ? config.debug : true,
+//       customParameters: config.customParameters || {},
+//       onStatusChange: config.onStatusChange || null,
+//       onNavigation: config.onNavigation || null,
+//       ...config
+//     };
+    
+//     // Dynamic data store
+//     const scormData = {
+//       'cmi.core.student_id': scormConfig.studentId,
+//       'cmi.core.student_name': scormConfig.studentName,
+//       'cmi.core.lesson_location': scormConfig.lessonLocation,
+//       'cmi.core.credit': scormConfig.credit,
+//       'cmi.core.lesson_status': scormConfig.lessonStatus,
+//       'cmi.core.entry': scormConfig.entry,
+//       'cmi.core.lesson_mode': scormConfig.lessonMode,
+//       'cmi.suspend_data': '',
+//       'cmi.core.score.raw': '',
+//       'cmi.core.score.max': '',
+//       'cmi.core.score.min': '',
+//       'cmi.core.total_time': '0000:00:00.00',
+//       'cmi.core.session_time': '0000:00:00.00',
+//       // SCORM 2004 mappings
+//       'cmi.learner_id': scormConfig.studentId,
+//       'cmi.learner_name': scormConfig.studentName,
+//       'cmi.location': scormConfig.lessonLocation,
+//       'cmi.completion_status': scormConfig.lessonStatus === 'completed' ? 'completed' : 'incomplete',
+//       'cmi.success_status': 'unknown',
+//       'cmi.score.scaled': '',
+//       'cmi.progress_measure': '',
+//       'cmi.mode': scormConfig.lessonMode,
+//       'cmi.entry': scormConfig.entry,
+//       'cmi.session_time': 'PT0H0M0S',
+//       'cmi.total_time': 'PT0H0M0S',
+//       ...scormConfig.customParameters
+//     };
+    
+//     // Update completion status dynamically
+//     function updateCompletionStatus(status) {
+//       scormData['cmi.core.lesson_status'] = status;
+//       scormData['cmi.completion_status'] = status === 'completed' ? 'completed' : 'incomplete';
+//       if (scormConfig.onStatusChange) {
+//         scormConfig.onStatusChange(status);
+//       }
+//     }
+    
+//     // Create a dynamic SCORM API
+//     const dynamicAPI = {
+//       LMSInitialize: function() {
+//         log("Dynamic API call: LMSInitialize");
+//         sendToReactNative({ 
+//           type: 'SCORM_INIT_DIRECT',
+//           config: scormConfig
+//         });
+//         return "true";
+//       },
+      
+//       LMSFinish: function() {
+//         log("Dynamic API call: LMSFinish");
+//         sendToReactNative({ 
+//           type: 'SCORM_FINISH_DIRECT',
+//           finalData: scormData
+//         });
+//         return "true";
+//       },
+      
+//       LMSCommit: function() {
+//         log("Dynamic API call: LMSCommit");
+//         sendToReactNative({ 
+//           type: 'SCORM_COMMIT_DIRECT',
+//           data: scormData
+//         });
+//         return "true";
+//       },
+      
+//       LMSGetValue: function(parameter) {
+//         log("Dynamic API call: LMSGetValue - " + parameter);
+        
+//         // Get value from dynamic data store
+//         let value = scormData[parameter] || '';
+        
+//         // Handle special cases dynamically
+//         if (parameter.startsWith('cmi.interactions.')) {
+//           // Parse interaction index and property
+//           const parts = parameter.split('.');
+//           const index = parts[2];
+//           const property = parts.slice(3).join('.');
+//           value = scormData[parameter] || getDefaultInteractionValue(property);
+//         }
+        
+//         sendToReactNative({ 
+//           type: 'SCORM_GET_DIRECT', 
+//           parameter: parameter,
+//           value: value,
+//           allData: scormConfig.debug ? scormData : undefined
+//         });
+        
+//         return value;
+//       },
+      
+//       LMSSetValue: function(parameter, value) {
+//         log("Dynamic API call: LMSSetValue - " + parameter + " = " + value);
+        
+//         // Store value in dynamic data store
+//         scormData[parameter] = value;
+        
+//         sendToReactNative({ 
+//           type: 'SCORM_SET_DIRECT', 
+//           parameter: parameter,
+//           value: value,
+//           allData: scormConfig.debug ? scormData : undefined
+//         });
+        
+//         // Handle navigation events
+//         if (parameter === 'cmi.core.lesson_location' || parameter === 'cmi.location' ||
+//             parameter.startsWith('cmi.suspend_data')) {
+          
+//           if (scormConfig.onNavigation) {
+//             scormConfig.onNavigation(parameter, value);
+//           }
+          
+//           sendToReactNative({ 
+//             type: 'SCORM_NAVIGATION', 
+//             parameter: parameter,
+//             value: value,
+//             location: scormData['cmi.core.lesson_location'] || scormData['cmi.location']
+//           });
+          
+//           // Try to parse completion from suspend_data
+//           if (parameter.startsWith('cmi.suspend_data')) {
+//             const parsedStatus = parseForCompletionStatus(value);
+//             if (parsedStatus) {
+//               updateCompletionStatus(parsedStatus);
+//               sendToReactNative({
+//                 type: 'COMPLETION_STATUS',
+//                 status: parsedStatus,
+//                 source: 'suspend_data_parsing',
+//                 suspendData: value
+//               });
+//             }
+//           }
+//         }
+        
+//         // Handle status changes for both SCORM versions
+//         if (parameter === 'cmi.core.lesson_status' || parameter === 'cmi.completion_status') {
+//           updateCompletionStatus(value);
+//           sendToReactNative({ 
+//             type: 'SCORM_STATUS_CHANGE',
+//             value: value,
+//             previousStatus: scormData[parameter]
+//           });
+          
+//           sendToReactNative({ 
+//             type: 'COMPLETION_STATUS',
+//             status: value,
+//             source: parameter
+//           });
+//         }
+        
+//         // Handle score updates for both versions
+//         if (parameter.startsWith('cmi.core.score') || parameter.startsWith('cmi.score')) {
+//           sendToReactNative({
+//             type: 'SCORM_SCORE_UPDATE',
+//             parameter: parameter,
+//             value: value,
+//             scores: {
+//               raw: scormData['cmi.core.score.raw'] || scormData['cmi.score.raw'],
+//               max: scormData['cmi.core.score.max'] || scormData['cmi.score.max'],
+//               min: scormData['cmi.core.score.min'] || scormData['cmi.score.min'],
+//               scaled: scormData['cmi.score.scaled']
+//             }
+//           });
+//         }
+        
+//         // Auto-commit if enabled
+//         if (scormConfig.autocommit) {
+//           this.LMSCommit();
+//         }
+        
+//         return "true";
+//       },
+      
+//       LMSGetLastError: function() {
+//         return "0";
+//       },
+      
+//       LMSGetErrorString: function(errorCode) {
+//         const errorStrings = {
+//           '0': 'No error',
+//           '101': 'General exception',
+//           '201': 'Invalid argument error',
+//           '202': 'Element cannot have children',
+//           '203': 'Element not an array - cannot have count',
+//           '301': 'Not initialized',
+//           '401': 'Not implemented error',
+//           '402': 'Invalid set value, element is a keyword',
+//           '403': 'Element is read only',
+//           '404': 'Element is write only',
+//           '405': 'Incorrect data type'
+//         };
+//         return errorStrings[errorCode] || 'Unknown error';
+//       },
+      
+//       LMSGetDiagnostic: function(errorCode) {
+//         return "Diagnostic info for error: " + errorCode;
+//       },
+      
+//       // SCORM 2004 methods
+//       Initialize: function() {
+//         log("SCORM 2004 API call: Initialize");
+//         return this.LMSInitialize();
+//       },
+      
+//       Terminate: function() {
+//         log("SCORM 2004 API call: Terminate");
+//         return this.LMSFinish();
+//       },
+      
+//       Commit: function() {
+//         log("SCORM 2004 API call: Commit");
+//         return this.LMSCommit();
+//       },
+      
+//       GetValue: function(parameter) {
+//         log("SCORM 2004 API call: GetValue - " + parameter);
+//         return this.LMSGetValue(parameter);
+//       },
+      
+//       SetValue: function(parameter, value) {
+//         log("SCORM 2004 API call: SetValue - " + parameter + " = " + value);
+//         return this.LMSSetValue(parameter, value);
+//       },
+      
+//       GetLastError: function() {
+//         return this.LMSGetLastError();
+//       },
+      
+//       GetErrorString: function(errorCode) {
+//         return this.LMSGetErrorString(errorCode);
+//       },
+      
+//       GetDiagnostic: function(errorCode) {
+//         return this.LMSGetDiagnostic(errorCode);
+//       },
+      
+//       // Additional utility methods
+//       getAllData: function() {
+//         return { ...scormData };
+//       },
+      
+//       updateConfig: function(newConfig) {
+//         Object.assign(scormConfig, newConfig);
+//         // Update data store with new values
+//         Object.keys(newConfig).forEach(key => {
+//           if (key.startsWith('cmi.')) {
+//             scormData[key] = newConfig[key];
+//           }
+//         });
+//       }
+//     };
+    
+//     // Helper function for interaction defaults
+//     function getDefaultInteractionValue(property) {
+//       const defaults = {
+//         'id': '',
+//         'type': 'choice',
+//         'objectives._count': '0',
+//         'timestamp': '',
+//         'correct_responses._count': '0',
+//         'weighting': '',
+//         'student_response': '',
+//         'result': '',
+//         'latency': ''
+//       };
+//       return defaults[property] || '';
+//     }
+    
+//     // Set up the APIs
+//     window.API = dynamicAPI;
+//     window.API_1484_11 = dynamicAPI; // SCORM 2004 API
+    
+//     // Also set up SCORM-again with dynamic configuration
+//     if (typeof Scorm12API !== 'undefined') {
+//       scormAPI = new Scorm12API({
+//         autocommit: scormConfig.autocommit,
+//         debug: scormConfig.debug,
+//         logLevel: scormConfig.debug ? 4 : 1,
+        
+//         lmsCommit: function() {
+//           log("SCORM 1.2 API: LMSCommit called");
+//           sendToReactNative({ 
+//             type: 'SCORM_COMMIT', 
+//             data: scormData,
+//             config: scormConfig
+//           });
+//           return "true";
+//         },
+        
+//         lmsInitialize: function() {
+//           log("SCORM 1.2 API: LMSInitialize called");
+//           sendToReactNative({ 
+//             type: 'SCORM_INIT',
+//             config: scormConfig
+//           });
+//           return "true";
+//         },
+        
+//         lmsFinish: function() {
+//           log("SCORM 1.2 API: LMSFinish called");
+//           sendToReactNative({ 
+//             type: 'SCORM_FINISH',
+//             finalData: scormData
+//           });
+//           return "true";
+//         },
+        
+//         lmsGetValue: function(parameter) {
+//           return dynamicAPI.LMSGetValue(parameter);
+//         },
+        
+//         lmsSetValue: function(parameter, value) {
+//           return dynamicAPI.LMSSetValue(parameter, value);
+//         }
+//       });
+//     }
+    
+//     // Set up SCORM 2004 API if available
+//     if (typeof Scorm2004API !== 'undefined') {
+//       scormAgainAPI = new Scorm2004API({
+//         autocommit: scormConfig.autocommit,
+//         debug: scormConfig.debug,
+//         logLevel: scormConfig.debug ? 4 : 1,
+        
+//         lmsCommit: function() {
+//           log("SCORM 2004 API: Commit called");
+//           sendToReactNative({ 
+//             type: 'SCORM_2004_COMMIT', 
+//             data: scormData,
+//             config: scormConfig
+//           });
+//           return "true";
+//         },
+        
+//         lmsInitialize: function() {
+//           log("SCORM 2004 API: Initialize called");
+//           sendToReactNative({ 
+//             type: 'SCORM_2004_INIT',
+//             config: scormConfig
+//           });
+//           return "true";
+//         },
+        
+//         lmsFinish: function() {
+//           log("SCORM 2004 API: Terminate called");
+//           sendToReactNative({ 
+//             type: 'SCORM_2004_FINISH',
+//             finalData: scormData
+//           });
+//           return "true";
+//         },
+        
+//         lmsGetValue: function(parameter) {
+//           return dynamicAPI.GetValue(parameter);
+//         },
+        
+//         lmsSetValue: function(parameter, value) {
+//           return dynamicAPI.SetValue(parameter, value);
+//         }
+//       });
+//     }
+    
+//     log("Dynamic SCORM APIs initialized with config:", scormConfig);
+    
+//     // Notify that API is ready with configuration
+//     sendToReactNative({ 
+//       type: 'SCORM_API_READY',
+//       config: scormConfig,
+//       dataStructure: Object.keys(scormData)
+//     });
+    
+//     return dynamicAPI; // Return the API for external use
+    
+//   } catch (err) {
+//     log("Failed to initialize Dynamic SCORM API: " + err.message);
+//     throw err;
+//   }
+// }
+function initializeSCORM(config = {}) {
+  try {
+    log("Initializing Dynamic SCORM API...");
+    
+    // Dynamic configuration with defaults
+    const scormConfig = {
+      studentId: config.studentId || 'default_student',
+      studentName: config.studentName || 'Default Student',
+      lessonLocation: config.lessonLocation || '',
+      credit: config.credit || 'credit',
+      lessonStatus: config.lessonStatus || 'not attempted',
+      entry: config.entry || 'ab-initio',
+      lessonMode: config.lessonMode || 'normal',
+      autocommit: config.autocommit !== undefined ? config.autocommit : true,
+      debug: config.debug !== undefined ? config.debug : true,
+      customParameters: config.customParameters || {},
+      onStatusChange: config.onStatusChange || null,
+      onNavigation: config.onNavigation || null,
+      ...config
+    };
+    
+    // Dynamic data store
+    const scormData = {
+      'cmi.core.student_id': scormConfig.studentId,
+      'cmi.core.student_name': scormConfig.studentName,
+      'cmi.core.lesson_location': scormConfig.lessonLocation,
+      'cmi.core.credit': scormConfig.credit,
+      'cmi.core.lesson_status': scormConfig.lessonStatus,
+      'cmi.core.entry': scormConfig.entry,
+      'cmi.core.lesson_mode': scormConfig.lessonMode,
+      'cmi.suspend_data': '',
+      'cmi.core.score.raw': '',
+      'cmi.core.score.max': '',
+      'cmi.core.score.min': '',
+      'cmi.core.total_time': '0000:00:00.00',
+      'cmi.core.session_time': '0000:00:00.00',
+      // SCORM 2004 mappings
+      'cmi.learner_id': scormConfig.studentId,
+      'cmi.learner_name': scormConfig.studentName,
+      'cmi.location': scormConfig.lessonLocation,
+      'cmi.completion_status': scormConfig.lessonStatus === 'completed' ? 'completed' : 'incomplete',
+      'cmi.success_status': 'unknown',
+      'cmi.score.scaled': '',
+      'cmi.progress_measure': '',
+      'cmi.mode': scormConfig.lessonMode,
+      'cmi.entry': scormConfig.entry,
+      'cmi.session_time': 'PT0H0M0S',
+      'cmi.total_time': 'PT0H0M0S',
+      ...scormConfig.customParameters
+    };
+    
+    // Track initialization state
+    let isInitialized = false;
+    
+    // Update completion status dynamically
+    function updateCompletionStatus(status) {
+      scormData['cmi.core.lesson_status'] = status;
+      scormData['cmi.completion_status'] = status === 'completed' ? 'completed' : 'incomplete';
+      if (scormConfig.onStatusChange) {
+        scormConfig.onStatusChange(status);
+      }
+    }
+    
+    // Create a dynamic SCORM API
+    const dynamicAPI = {
+      LMSInitialize: function() {
+        log("Dynamic API call: LMSInitialize");
+        try {
+          isInitialized = true;
+          sendToReactNative({ 
+            type: 'SCORM_INIT_DIRECT',
+            config: scormConfig,
+            success: true,
+            message: 'SCORM API initialized successfully'
+          });
+          return "true";
+        } catch (error) {
+          log("Error in LMSInitialize: " + error.message);
+          sendToReactNative({ 
+            type: 'SCORM_INIT_DIRECT',
+            config: scormConfig,
+            success: false,
+            error: error.message
+          });
+          return "false";
+        }
+      },
+      
+      LMSFinish: function() {
+        log("Dynamic API call: LMSFinish");
+        try {
+          if (!isInitialized) {
+            log("Warning: LMSFinish called before initialization");
+          }
+          
+          sendToReactNative({ 
+            type: 'SCORM_FINISH_DIRECT',
+            finalData: scormData,
+            success: true,
+            message: 'SCORM session finished successfully'
+          });
+          
+          isInitialized = false;
+          return "true";
+        } catch (error) {
+          log("Error in LMSFinish: " + error.message);
+          sendToReactNative({ 
+            type: 'SCORM_FINISH_DIRECT',
+            finalData: scormData,
+            success: false,
+            error: error.message
+          });
+          return "false";
+        }
+      },
+      
+      LMSCommit: function() {
+        log("Dynamic API call: LMSCommit");
+        try {
+          if (!isInitialized) {
+            log("Warning: LMSCommit called before initialization");
+            return "false";
+          }
+          
+          sendToReactNative({ 
+            type: 'SCORM_COMMIT_DIRECT',
+            data: scormData,
+            success: true,
+            message: 'Data committed successfully'
+          });
+          return "true";
+        } catch (error) {
+          log("Error in LMSCommit: " + error.message);
+          sendToReactNative({ 
+            type: 'SCORM_COMMIT_DIRECT',
+            data: scormData,
+            success: false,
+            error: error.message
+          });
+          return "false";
+        }
+      },
+      
+      LMSGetValue: function(parameter) {
+        log("Dynamic API call: LMSGetValue - " + parameter);
+        try {
+          if (!isInitialized) {
+            log("Warning: LMSGetValue called before initialization");
+          }
+          
+          // Get value from dynamic data store
+          let value = scormData[parameter] || '';
+          
+          // Handle special cases dynamically
+          if (parameter.startsWith('cmi.interactions.')) {
+            const parts = parameter.split('.');
+            const index = parts[2];
+            const property = parts.slice(3).join('.');
+            value = scormData[parameter] || getDefaultInteractionValue(property);
+          }
+          
+          sendToReactNative({ 
+            type: 'SCORM_GET_DIRECT', 
+            parameter: parameter,
+            value: value,
+            success: true,
+            allData: scormConfig.debug ? scormData : undefined
+          });
+          
+          return value;
+        } catch (error) {
+          log("Error in LMSGetValue: " + error.message);
+          sendToReactNative({ 
+            type: 'SCORM_GET_DIRECT', 
+            parameter: parameter,
+            value: '',
+            success: false,
+            error: error.message
+          });
+          return '';
+        }
+      },
+      
+      LMSSetValue: function(parameter, value) {
+        log("Dynamic API call: LMSSetValue - " + parameter + " = " + value);
+        try {
+          if (!isInitialized) {
+            log("Warning: LMSSetValue called before initialization");
+          }
+          
+          // Store value in dynamic data store
+          scormData[parameter] = value;
+          
+          sendToReactNative({ 
+            type: 'SCORM_SET_DIRECT', 
+            parameter: parameter,
+            value: value,
+            success: true,
+            allData: scormConfig.debug ? scormData : undefined
+          });
+          
+          // Handle navigation events
+          if (parameter === 'cmi.core.lesson_location' || parameter === 'cmi.location' ||
+              parameter.startsWith('cmi.suspend_data')) {
+            
+            if (scormConfig.onNavigation) {
+              scormConfig.onNavigation(parameter, value);
+            }
+            
+            sendToReactNative({ 
+              type: 'SCORM_NAVIGATION', 
+              parameter: parameter,
+              value: value,
+              success: true,
+              location: scormData['cmi.core.lesson_location'] || scormData['cmi.location']
+            });
+            
+            // Try to parse completion from suspend_data
+            if (parameter.startsWith('cmi.suspend_data')) {
+              const parsedStatus = parseForCompletionStatus(value);
+              if (parsedStatus) {
+                updateCompletionStatus(parsedStatus);
+                sendToReactNative({
+                  type: 'COMPLETION_STATUS',
+                  status: parsedStatus,
+                  success: true,
+                  source: 'suspend_data_parsing',
+                  suspendData: value
+                });
+              }
+            }
+          }
+          
+          // Handle status changes for both SCORM versions
+          if (parameter === 'cmi.core.lesson_status' || parameter === 'cmi.completion_status') {
+            updateCompletionStatus(value);
+            sendToReactNative({ 
+              type: 'SCORM_STATUS_CHANGE',
+              value: value,
+              success: true,
+              previousStatus: scormData[parameter]
+            });
+            
+            sendToReactNative({ 
+              type: 'COMPLETION_STATUS',
+              status: value,
+              success: true,
+              source: parameter
+            });
+          }
+          
+          // Handle score updates for both versions
+          if (parameter.startsWith('cmi.core.score') || parameter.startsWith('cmi.score')) {
+            sendToReactNative({
+              type: 'SCORM_SCORE_UPDATE',
+              parameter: parameter,
+              value: value,
+              success: true,
+              scores: {
+                raw: scormData['cmi.core.score.raw'] || scormData['cmi.score.raw'],
+                max: scormData['cmi.core.score.max'] || scormData['cmi.score.max'],
+                min: scormData['cmi.core.score.min'] || scormData['cmi.score.min'],
+                scaled: scormData['cmi.score.scaled']
+              }
+            });
+          }
+          
+          // Auto-commit if enabled
+          if (scormConfig.autocommit) {
+            this.LMSCommit();
+          }
+          
+          return "true";
+        } catch (error) {
+          log("Error in LMSSetValue: " + error.message);
+          sendToReactNative({ 
+            type: 'SCORM_SET_DIRECT', 
+            parameter: parameter,
+            value: value,
+            success: false,
+            error: error.message
+          });
+          return "false";
+        }
+      },
+      
+      LMSGetLastError: function() {
+        return "0";
+      },
+      
+      LMSGetErrorString: function(errorCode) {
+        const errorStrings = {
+          '0': 'No error',
+          '101': 'General exception',
+          '201': 'Invalid argument error',
+          '202': 'Element cannot have children',
+          '203': 'Element not an array - cannot have count',
+          '301': 'Not initialized',
+          '401': 'Not implemented error',
+          '402': 'Invalid set value, element is a keyword',
+          '403': 'Element is read only',
+          '404': 'Element is write only',
+          '405': 'Incorrect data type'
+        };
+        return errorStrings[errorCode] || 'Unknown error';
+      },
+      
+      LMSGetDiagnostic: function(errorCode) {
+        return "Diagnostic info for error: " + errorCode;
+      },
+      
+      // SCORM 2004 methods
+      Initialize: function() {
+        log("SCORM 2004 API call: Initialize");
+        return this.LMSInitialize();
+      },
+      
+      Terminate: function() {
+        log("SCORM 2004 API call: Terminate");
+        return this.LMSFinish();
+      },
+      
+      Commit: function() {
+        log("SCORM 2004 API call: Commit");
+        return this.LMSCommit();
+      },
+      
+      GetValue: function(parameter) {
+        log("SCORM 2004 API call: GetValue - " + parameter);
+        return this.LMSGetValue(parameter);
+      },
+      
+      SetValue: function(parameter, value) {
+        log("SCORM 2004 API call: SetValue - " + parameter + " = " + value);
+        return this.LMSSetValue(parameter, value);
+      },
+      
+      GetLastError: function() {
+        return this.LMSGetLastError();
+      },
+      
+      GetErrorString: function(errorCode) {
+        return this.LMSGetErrorString(errorCode);
+      },
+      
+      GetDiagnostic: function(errorCode) {
+        return this.LMSGetDiagnostic(errorCode);
+      },
+      
+      // Additional utility methods
+      getAllData: function() {
+        return { ...scormData };
+      },
+      
+      updateConfig: function(newConfig) {
+        Object.assign(scormConfig, newConfig);
+        Object.keys(newConfig).forEach(key => {
+          if (key.startsWith('cmi.')) {
+            scormData[key] = newConfig[key];
+          }
+        });
+      },
+      
+      // Status check method
+      isAPIInitialized: function() {
+        return isInitialized;
+      }
+    };
+    
+    // Helper function for interaction defaults
+    function getDefaultInteractionValue(property) {
+      const defaults = {
+        'id': '',
+        'type': 'choice',
+        'objectives._count': '0',
+        'timestamp': '',
+        'correct_responses._count': '0',
+        'weighting': '',
+        'student_response': '',
+        'result': '',
+        'latency': ''
+      };
+      return defaults[property] || '';
+    }
+    
+    // Set up the APIs
+    window.API = dynamicAPI;
+    window.API_1484_11 = dynamicAPI;
+    
+    // Also set up SCORM-again with enhanced error handling
+    if (typeof Scorm12API !== 'undefined') {
+      try {
+        scormAPI = new Scorm12API({
+          autocommit: scormConfig.autocommit,
+          debug: scormConfig.debug,
+          logLevel: scormConfig.debug ? 4 : 1,
+          
+          lmsCommit: function() {
+            log("SCORM 1.2 API: LMSCommit called");
+            try {
+              sendToReactNative({ 
+                type: 'SCORM_COMMIT', 
+                data: scormData,
+                config: scormConfig,
+                success: true
+              });
+              return "true";
+            } catch (error) {
+              sendToReactNative({ 
+                type: 'SCORM_COMMIT', 
+                data: scormData,
+                config: scormConfig,
+                success: false,
+                error: error.message
+              });
+              return "false";
+            }
+          },
+          
+          lmsInitialize: function() {
+            log("SCORM 1.2 API: LMSInitialize called");
+            try {
+              sendToReactNative({ 
+                type: 'SCORM_INIT',
+                config: scormConfig,
+                success: true
+              });
+              return "true";
+            } catch (error) {
+              sendToReactNative({ 
+                type: 'SCORM_INIT',
+                config: scormConfig,
+                success: false,
+                error: error.message
+              });
+              return "false";
+            }
+          },
+          
+          lmsFinish: function() {
+            log("SCORM 1.2 API: LMSFinish called");
+            try {
+              sendToReactNative({ 
+                type: 'SCORM_FINISH',
+                finalData: scormData,
+                success: true
+              });
+              return "true";
+            } catch (error) {
+              sendToReactNative({ 
+                type: 'SCORM_FINISH',
+                finalData: scormData,
+                success: false,
+                error: error.message
+              });
+              return "false";
+            }
+          },
+          
+          lmsGetValue: function(parameter) {
+            return dynamicAPI.LMSGetValue(parameter);
+          },
+          
+          lmsSetValue: function(parameter, value) {
+            return dynamicAPI.LMSSetValue(parameter, value);
+          }
+        });
+        
+        log("SCORM 1.2 API initialized successfully");
+      } catch (error) {
+        log("Failed to initialize SCORM 1.2 API: " + error.message);
+      }
+    }
+    
+    // Set up SCORM 2004 API if available
+    if (typeof Scorm2004API !== 'undefined') {
+      try {
+        scormAgainAPI = new Scorm2004API({
+          autocommit: scormConfig.autocommit,
+          debug: scormConfig.debug,
+          logLevel: scormConfig.debug ? 4 : 1,
+          
+          lmsCommit: function() {
+            log("SCORM 2004 API: Commit called");
+            try {
+              sendToReactNative({ 
+                type: 'SCORM_2004_COMMIT', 
+                data: scormData,
+                config: scormConfig,
+                success: true
+              });
+              return "true";
+            } catch (error) {
+              sendToReactNative({ 
+                type: 'SCORM_2004_COMMIT', 
+                data: scormData,
+                config: scormConfig,
+                success: false,
+                error: error.message
+              });
+              return "false";
+            }
+          },
+          
+          lmsInitialize: function() {
+            log("SCORM 2004 API: Initialize called");
+            try {
+              sendToReactNative({ 
+                type: 'SCORM_2004_INIT',
+                config: scormConfig,
+                success: true
+              });
+              return "true";
+            } catch (error) {
+              sendToReactNative({ 
+                type: 'SCORM_2004_INIT',
+                config: scormConfig,
+                success: false,
+                error: error.message
+              });
+              return "false";
+            }
+          },
+          
+          lmsFinish: function() {
+            log("SCORM 2004 API: Terminate called");
+            try {
+              sendToReactNative({ 
+                type: 'SCORM_2004_FINISH',
+                finalData: scormData,
+                success: true
+              });
+              return "true";
+            } catch (error) {
+              sendToReactNative({ 
+                type: 'SCORM_2004_FINISH',
+                finalData: scormData,
+                success: false,
+                error: error.message
+              });
+              return "false";
+            }
+          },
+          
+          lmsGetValue: function(parameter) {
+            return dynamicAPI.GetValue(parameter);
+          },
+          
+          lmsSetValue: function(parameter, value) {
+            return dynamicAPI.SetValue(parameter, value);
+          }
+        });
+        
+        log("SCORM 2004 API initialized successfully");
+      } catch (error) {
+        log("Failed to initialize SCORM 2004 API: " + error.message);
+      }
+    }
+    
+    log("Dynamic SCORM APIs initialized with config");
+    
+    // Notify that API is ready with configuration
+    sendToReactNative({ 
+      type: 'SCORM_API_READY',
+      config: scormConfig,
+      success: true,
+      dataStructure: Object.keys(scormData),
+      hasScormAgain: typeof Scorm12API !== 'undefined',
+      hasScorm2004: typeof Scorm2004API !== 'undefined'
+    });
+    
+    return dynamicAPI;
+    
+  } catch (err) {
+    log("Failed to initialize Dynamic SCORM API: " + err.message);
+    sendToReactNative({ 
+      type: 'SCORM_API_READY',
+      success: false,
+      error: err.message
+    });
+    throw err;
+  }
+}
+
+// Load the SCORM content
+    async function loadContent() {
+      try {
+        log("Loading content...");
+        const entryPath = './index.html';
+        log("Loading content from: " + entryPath);
+        document.getElementById('contentFrame').src = entryPath;
+        contentLoaded = true;
+      } catch (err) {
+        log("Error loading content: " + err.message);
+      }
+    }
+
+    // Setup message listener for iframe communication
+    function setupMessageListener() {
+      window.addEventListener('message', function (event) {
+        log("Received message from iframe: " + JSON.stringify(event.data).substring(0, 100));
+        sendToReactNative({
+          type: 'IFRAME_MESSAGE',
+          data: event.data
+        });
+      });
+
+      log("Message listener set up");
+    }
+
+    // Receive messages from React Native
+    function setupReactNativeListener() {
+      window.addEventListener('message', function (event) {
+        if (event.data && typeof event.data === 'string') {
+          try {
+            const data = JSON.parse(event.data);
+            log("Received message from React Native: " + JSON.stringify(data).substring(0, 100));
+
+            // Handle commands from React Native
+            if (data.command === 'terminate') {
+              terminateSCORM();
+            } else if (data.command === 'status') {
+              forceStatusUpdate();
+            } else if (data.command === 'checkAPI') {
+              checkAPIObjects();
+            }
+          } catch (e) {
+            log("Error processing RN message: " + e.message);
+          }
+        }
+      });
+      log("React Native listener set up");
+    }
+
+    // Make sure the API is exposed properly to the iframe
+    function checkAPIObjects() {
+      try {
+        const frame = document.getElementById('contentFrame');
+        const frameWindow = frame.contentWindow || frame.contentDocument.defaultView;
+
+        if (!frameWindow) {
+          log("ERROR: Cannot access content frame window");
+          return;
+        }
+
+        let report = {
+          topWindow: !!window.API,
+          frameWindow: !!frameWindow.API,
+          topWindowScormAgain: !!window.API && typeof window.API.LMSInitialize === 'function',
+          frameWindowScormAgain: !!frameWindow.API && typeof frameWindow.API.LMSInitialize === 'function',
+          scorm2004Available: !!window.API_1484_11,
+          frameScorm2004: !!frameWindow.API_1484_11
+        };
+
+        log("API availability check: " + JSON.stringify(report));
+
+        sendToReactNative({
+          type: 'API_CHECK',
+          data: report
+        });
+
+        // Try to fix if needed
+        if (!frameWindow.API) {
+          log("Injecting API into frame window");
+          frameWindow.API = window.API;
+          frameWindow.API_1484_11 = window.API_1484_11; // Inject SCORM 2004 API
+
+          // Force an early initialize call
+          if (frameWindow.API && typeof frameWindow.API.LMSInitialize === 'function') {
+            log("Auto-calling LMSInitialize");
+            frameWindow.API.LMSInitialize("");
+          }
+        }
+      } catch (err) {
+        log("Error checking API objects: " + err.message);
+      }
+    }
+
+    // Extract completion status from suspend_data if needed
+    function parseForCompletionStatus(data) {
+      // This is a simplified parser - many SCORM packages encode completion
+      // information in suspend_data in custom formats
+      // You may need to adapt this based on your specific SCORM content
+
+      if (!data) return null;
+
+      try {
+        // Look for SCORM 1.2 common patterns
+        // Look for percentage patterns
+        if (data.includes('percentComplete')) {
+          const match = data.match(/percentComplete[=:]\s*(\d+)/i);
+          if (match && match[1]) {
+            const percent = parseInt(match[1]);
+            return percent >= 100 ? 'completed' : 'incomplete';
+          }
+        }
+
+        // Look for direct completion flags
+        if (data.includes('complete=true') || data.includes('completed=true') ||
+          data.includes('"complete":true') || data.includes('"completed":true')) {
+          return 'completed';
+        }
+
+        // Look for "status:completed" pattern
+        if (data.includes('status:completed') || data.includes('status=completed') ||
+          data.includes('"status":"completed"')) {
+          return 'completed';
+        }
+
+        // Look for slides/screens completion pattern (common in many packages)
+        const viewedSlideMatch = data.match(/viewed[Ss]lides?[=:]\s*(\d+)\/(\d+)/);
+        if (viewedSlideMatch && viewedSlideMatch[1] && viewedSlideMatch[2]) {
+          if (parseInt(viewedSlideMatch[1]) >= parseInt(viewedSlideMatch[2])) {
+            return 'completed';
+          } else if (parseInt(viewedSlideMatch[1]) > 0) {
+            return 'incomplete';
+          }
+        }
+
+        // Analyze the data you shared earlier, it looks like an encoded SCORM package
+        if (data.includes('MlNITD') && data.includes('pSDBI') && data.includes('CuED')) {
+          if (data.includes('fPDefault') && data.includes('Student')) {
+            // This is likely an Articulate or similar SCORM package
+            // Many use specific patterns in the encoded strings
+            if (data.includes('completed') || data.includes('passed')) {
+              return 'completed';
+            } else if (data.includes('incomplete') || data.includes('failed')) {
+              return 'incomplete';
+            }
+          }
+        }
+
+        // Slide47 pattern from your data
+        if (data.includes('Slide_47') || data.includes('slide_47')) {
+          // This appears to be a specific slide - if it's near the end, it might
+          // indicate completion or near-completion
+          return 'incomplete'; // Conservatively mark as incomplete
+        }
+      } catch (err) {
+        log("Error parsing suspend_data: " + err.message);
+      }
+
+      return null;
+    }
+
+    // Handle content frame load
+    function handleFrameLoad() {
+      log("Content frame loaded!");
+
+      try {
+        const frame = document.getElementById('contentFrame');
+        const frameWindow = frame.contentWindow || frame.contentDocument.defaultView;
+
+        // Make SCORM API available in the iframe
+        if (frameWindow) {
+          // Direct API
+          frameWindow.API = window.API;
+          frameWindow.API_1484_11 = window.API_1484_11; // SCORM 2004 API
+
+          // Make the wrapper available too in case content needs it
+          frameWindow.parent = window;
+
+          log("SCORM APIs (1.2 & 2004) injected into content frame");
+
+        } else {
+          log("Failed to access content frame window");
+        }
+      } catch (err) {
+        log("Error handling frame load: " + err.message);
+      }
+    }
+
+    // Manual function to terminate SCORM session
+    function terminateSCORM() {
+      if (window.API) {
+        log("Manually terminating SCORM session");
+
+        // Before terminating, make sure to record final status
+        forceStatusUpdate();
+
+        const result = window.API.LMSFinish('');
+        log("LMSFinish directly called with result: " + result);
+        sendToReactNative({
+          type: 'SCORM_TERMINATED',
+          result: result,
+          finalStatus: completionStatus
+        });
+      } else {
+        log("Cannot terminate: SCORM API not initialized");
+      }
+    }
+    // Error handling
+    window.onerror = function (message, source, lineno, colno, error) {
+      log("JS Error: " + message + " at " + source + ":" + lineno);
+      sendToReactNative({
+        type: 'ERROR',
+        message: message,
+        source: source,
+        line: lineno
+      });
+      return true;
+    };
+
+    // Initialize everything when page loads
+    document.addEventListener('DOMContentLoaded', function () {
+      log("DOM loaded, starting initialization");
+
+      // Initialize the completion status early
+      updateCompletionStatus('not attempted');
+
+      // Set up iframe onload handler
+      const frame = document.getElementById('contentFrame');
+      frame.onload = handleFrameLoad;
+
+      // Initialize systems in order
+      initializeSCORM();
+      setupMessageListener();
+      setupReactNativeListener();
+      loadContent();
+      log("Initialization complete");
+    });
+
+  </script>
+  <style>
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      width: 100%;
+      overflow: hidden;
+      font-family: system-ui, -apple-system, sans-serif;
+    }
+
+    #status {
+      padding: 5px;
+      font-family: monospace;
+      font-size: 12px;
+      background-color: #f0f0f0;
+      height: 20px;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
+
+    iframe {
+      border: none;
+      width: 100%;
+      height: 60%;
+      display: block;
+      background-color: white;
+    }
+
+    #debugPanel {
+      display: block;
+      height: 35%;
+      background-color: #f8f8f8;
+      border-top: 1px solid #ddd;
+      overflow: auto;
+      padding: 5px;
+    }
+
+    #logOutput {
+      height: 75%;
+      overflow-y: auto;
+      background: #fff;
+      border: 1px solid #ddd;
+      padding: 5px;
+      font-family: monospace;
+      font-size: 11px;
+    }
+
+    .log-entry {
+      padding: 2px 0;
+      border-bottom: 1px solid #eee;
+      word-break: break-all;
+    }
+
+    button {
+      margin: 3px;
+      padding: 5px 8px;
+    }
+
+    .button-row {
+      margin-top: 5px;
+      margin-bottom: 5px;
+    }
+
+    .completion-wrapper {
+      padding: 8px;
+      background-color: #eee;
+      border-radius: 4px;
+      margin-bottom: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .completion-label {
+      font-weight: bold;
+    }
+
+    .completion-status {
+      padding: 3px 8px;
+      border-radius: 3px;
+      font-weight: bold;
+    }
+
+    .status-completed {
+      background-color: #d4edda;
+      color: #155724;
+    }
+
+    .status-incomplete,
+    .status-failed {
+      background-color: #f8d7da;
+      color: #721c24;
+    }
+
+    .status-not-attempted {
+      background-color: #fff3cd;
+      color: #856404;
+    }
+
+    /* Make error messages stand out more */
+    .log-entry:contains("Error") {
+      color: #721c24;
+      font-weight: bold;
+    }
+  </style>
+</head>
+
+<body>
+  <iframe id="contentFrame" allow="autoplay; fullscreen"></iframe>
+</body>
+
+</html>
