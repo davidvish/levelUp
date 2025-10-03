@@ -13,7 +13,7 @@ import {
   StyleSheet,
   TextInput,
   TouchableOpacity,
-  View
+  View,
 } from 'react-native';
 import {
   RNActionSheet,
@@ -21,7 +21,7 @@ import {
   RNContainer,
   RNImage,
   RNText,
-  RNTextInput
+  RNTextInput,
 } from '../../../Common';
 import {_onPressNavigate, onLogout} from '../../../utils/commonFunction';
 import {COLORS, IMAGES, STRINGS} from '../../../constants';
@@ -31,7 +31,7 @@ import {scale} from 'react-native-size-matters';
 import {CheckBox} from 'react-native-elements';
 import DraggableFlatList, {
   RenderItemParams,
-  DragEndParams
+  DragEndParams,
 } from 'react-native-draggable-flatlist';
 import {GestureHandlerRootView} from 'react-native-gesture-handler';
 import {
@@ -42,7 +42,7 @@ import {
   examPlayFailAction,
   examPlayRequestAction,
   getExamResultRequestAction,
-  SubmitAttestationRequestAction
+  SubmitAttestationRequestAction,
 } from './module/action';
 import {useDispatch} from 'react-redux';
 import {scromChapterSelector} from './module/reducer';
@@ -59,17 +59,17 @@ const initialData: DataItem[] = [
   {key: '1', label: '9=18+2'},
   {key: '2', label: '9-9'},
   {key: '3', label: '18+2'},
-  {key: '4', label: '=0'}
+  {key: '4', label: '=0'},
 ];
 
 const QuestionCheck = {
   MCQs: 'MCQs',
-  CLOZE: 'CLOZE'
+  CLOZE: 'CLOZE',
 };
 
 const booleanFourthoptions = [
   {id: 1, text: 'True', isCorrect: true},
-  {id: 2, text: 'False', isCorrect: false}
+  {id: 2, text: 'False', isCorrect: false},
 ];
 
 const screenWidth = Dimensions.get('window').width;
@@ -84,7 +84,7 @@ const AttestationExam: React.FC = (props: any) => {
     examAddUserAttemptData,
     examPlayLoading,
     attestionQuestionData,
-    attestionQuestionLoading
+    attestionQuestionLoading,
   } = scromChapterSelector();
   const [checkedIndex, setCheckedIndex] = useState(-1);
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
@@ -93,7 +93,7 @@ const AttestationExam: React.FC = (props: any) => {
   const [selectedMultiOptions, setSelectedMultiOptions] = useState<any>([]);
   const [clozeButtonDisable, setClozeButtonDisable] = useState(true);
   const [clozeButtonSelectedItem, setClozeButtonSelectedItem] = useState<any>(
-    []
+    [],
   );
   const [submitButtonCondtion, setSubmitButtonCondtion] = useState(false);
   const [singleMCQItem, setSingleMCQItem] = useState<any>([]);
@@ -106,7 +106,7 @@ const AttestationExam: React.FC = (props: any) => {
     Animated.timing(slideAnim, {
       toValue: 0,
       duration: 300,
-      useNativeDriver: true
+      useNativeDriver: true,
     }).start();
   }, [currentCardIndex]);
 
@@ -130,13 +130,13 @@ const AttestationExam: React.FC = (props: any) => {
       return () => {
         clearState();
       };
-    }, [])
+    }, []),
   );
 
   const attestationFunction = () => {
     setLoading(true);
     const body = {
-      id: startAttestionData?.attestationDetail?.id || ''
+      id: startAttestionData?.attestationDetail?.id || '',
     };
     const callback = (res: any) => {
       setLoading(false);
@@ -149,19 +149,14 @@ const AttestationExam: React.FC = (props: any) => {
 
   useEffect(() => {
     navigation.addListener('blur', () => {
-      BackHandler.removeEventListener(
-        'hardwareBackPress',
-        handleBackButtonClick
-      );
+      BackHandler.addEventListener('hardwareBackPress', handleBackButtonClick);
     });
     navigation.addListener('focus', () => {
       BackHandler.addEventListener('hardwareBackPress', handleBackButtonClick);
     });
     return () => {
-      BackHandler.removeEventListener(
-        'hardwareBackPress',
-        handleBackButtonClick
-      );
+      BackHandler.addEventListener('hardwareBackPress', handleBackButtonClick);
+
       (navigation as any).removeListener('blur');
       (navigation as any).removeListener('focus');
     };
@@ -189,7 +184,7 @@ const AttestationExam: React.FC = (props: any) => {
       !Array.isArray(hasFilterData.attestationQuestionOptions)
     ) {
       Toast.show('Invalid data structure for attestation question options', {
-        type: 'danger'
+        type: 'danger',
       });
       setLoading(false);
       return;
@@ -223,7 +218,7 @@ const AttestationExam: React.FC = (props: any) => {
 
     if (selectedOptions.length === 0) {
       Toast.show('Please select an answer before proceeding', {
-        type: 'warning'
+        type: 'warning',
       });
       setLoading(false);
       return;
@@ -236,7 +231,7 @@ const AttestationExam: React.FC = (props: any) => {
       // userId: "", // This should be populated with actual user ID
       userSelectedOptionIdList: selectedOptions,
       resourseMappingId: startAttestionData?.userProgress?.id,
-      createdDate: startAttestionData?.createdDate
+      createdDate: startAttestionData?.createdDate,
     };
 
     // Validate required fields in body
@@ -253,7 +248,7 @@ const AttestationExam: React.FC = (props: any) => {
       setLoading(false);
       if (res !== 'error') {
         setSubmitButtonCondtion(
-          currentCardIndex === attestionQuestionData?.length - 1
+          currentCardIndex === attestionQuestionData?.length - 1,
         );
         if (currentCardIndex < attestionQuestionData.length - 1) {
           setCurrentCardIndex(currentCardIndex + 1);
@@ -276,7 +271,7 @@ const AttestationExam: React.FC = (props: any) => {
             width: '90%',
             paddingHorizontal: 10,
             backgroundColor: COLORS.WHITE,
-            paddingVertical: 20
+            paddingVertical: 20,
           }}>
           <RNText
             style={{marginTop: scale(15)}}
@@ -297,7 +292,7 @@ const AttestationExam: React.FC = (props: any) => {
             onPress={() => {
               setFinishModalVisible(false);
               _onPressNavigate(SCREEN_NAMES.CourseStack, {
-                screen: SCREEN_NAMES.CoursePreview
+                screen: SCREEN_NAMES.CoursePreview,
               });
             }}
             textColor={COLORS.WHITE}
@@ -352,7 +347,7 @@ const AttestationExam: React.FC = (props: any) => {
     // }
     // dispatch(getExamResultRequestAction({ body, callback }))
     _onPressNavigate(SCREEN_NAMES.CourseStack, {
-      screen: SCREEN_NAMES.CoursePreview
+      screen: SCREEN_NAMES.CoursePreview,
     });
   };
 
@@ -367,7 +362,7 @@ const AttestationExam: React.FC = (props: any) => {
             justifyContent: 'center',
             width: '90%',
             alignItems: 'center',
-            marginTop: scale(10)
+            marginTop: scale(10),
           }}>
           <RNText TextAlignCenter large textColor={COLORS.BORDER_COLOR}>
             No Record Found
@@ -390,7 +385,7 @@ const AttestationExam: React.FC = (props: any) => {
               style={{
                 paddingHorizontal: scale(5),
                 paddingVertical: scale(10),
-                marginTop: scale(10)
+                marginTop: scale(10),
               }}>
               <RNText TextAlignCenter small textColor={COLORS.GRAYTEXTCOLOR}>
                 Question{' '}
@@ -417,7 +412,7 @@ const AttestationExam: React.FC = (props: any) => {
                 <View
                   style={[
                     styles.imageContainer,
-                    {backgroundColor: COLORS.WHITE}
+                    {backgroundColor: COLORS.WHITE},
                   ]}>
                   <RNImage
                     resizeMode={'cover'}
@@ -453,7 +448,7 @@ const AttestationExam: React.FC = (props: any) => {
                           ? COLORS.WHITE
                           : '#DDE1F6',
                         margin: 5,
-                        padding: 5
+                        padding: 5,
                       }}>
                       <CheckBox
                         checkedIcon={
@@ -491,7 +486,7 @@ const AttestationExam: React.FC = (props: any) => {
                           if (examPlayCard?.isMultipleAnswers) {
                             handleMultiToggleCheckBox(
                               optionItem.id,
-                              optionItem
+                              optionItem,
                             );
                           } else {
                             handleToggleCheckBox(index);
@@ -505,7 +500,7 @@ const AttestationExam: React.FC = (props: any) => {
                         {optionItem?.option || ''}
                       </RNText>
                     </TouchableOpacity>
-                  )
+                  ),
                 )}
               </View>
             </React.Fragment>
@@ -528,7 +523,7 @@ const AttestationExam: React.FC = (props: any) => {
                     <View
                       style={[
                         styles.imageContainer,
-                        {backgroundColor: COLORS.WHITE}
+                        {backgroundColor: COLORS.WHITE},
                       ]}>
                       <RNImage
                         resizeMode={'cover'}
@@ -548,7 +543,7 @@ const AttestationExam: React.FC = (props: any) => {
                             if (item?.isMultipleAnswers) {
                               handleMultiToggleCheckBox(
                                 optionItem.id,
-                                optionItem
+                                optionItem,
                               );
                             } else {
                               handleToggleCheckBox(index);
@@ -567,7 +562,7 @@ const AttestationExam: React.FC = (props: any) => {
                               ? COLORS.WHITE
                               : '#DDE1F6',
                             margin: 5,
-                            padding: 5
+                            padding: 5,
                           }}>
                           <CheckBox
                             checkedIcon={
@@ -605,7 +600,7 @@ const AttestationExam: React.FC = (props: any) => {
                               if (item?.isMultipleAnswers) {
                                 handleMultiToggleCheckBox(
                                   optionItem.id,
-                                  optionItem
+                                  optionItem,
                                 );
                               } else {
                                 handleToggleCheckBox(index);
@@ -619,7 +614,7 @@ const AttestationExam: React.FC = (props: any) => {
                             {optionItem?.answer || ''}
                           </RNText>
                         </TouchableOpacity>
-                      )
+                      ),
                     )}
                   </View>
                 </React.Fragment>
@@ -650,7 +645,7 @@ const AttestationExam: React.FC = (props: any) => {
     submitButtonCondtion,
     multiSelectedMCQItem,
     loading,
-    optionalQuestionCheckAnswer
+    optionalQuestionCheckAnswer,
   ]);
 
   const SixthButtonBottomView = useMemo(() => {
@@ -673,7 +668,7 @@ const AttestationExam: React.FC = (props: any) => {
     submitButtonCondtion,
     clozeButtonDisable,
     loading,
-    optionalQuestionCheckAnswer
+    optionalQuestionCheckAnswer,
   ]);
 
   const getBottomChildren = (): React.ReactNode => {
@@ -685,7 +680,7 @@ const AttestationExam: React.FC = (props: any) => {
     }
 
     const buttonComponents = {
-      [QuestionCheck.MCQs]: SecondButtonBottomView
+      [QuestionCheck.MCQs]: SecondButtonBottomView,
       //[QuestionCheck.CLOZE]: SixthButtonBottomView,
     };
 
@@ -737,15 +732,15 @@ const styles = StyleSheet.create({
     shadowOffset:
       Platform.OS === 'android' ? {width: 0, height: 0} : {width: 0, height: 2},
     shadowOpacity: Platform.OS === 'android' ? 0 : 1,
-    shadowRadius: Platform.OS === 'android' ? 0 : 3.84
+    shadowRadius: Platform.OS === 'android' ? 0 : 3.84,
   },
   progressContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 6
+    padding: 6,
   },
   progressText: {
-    marginLeft: 20
+    marginLeft: 20,
   },
   textInput: {
     height: scale(110),
@@ -758,13 +753,13 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     backgroundColor: COLORS.WHITE,
     fontSize: scale(14),
-    textAlignVertical: 'top' // for Android to align text to the top
+    textAlignVertical: 'top', // for Android to align text to the top
   },
   optionsContainer: {
-    padding: 15
+    padding: 15,
   },
   button: {
-    width: '95%'
+    width: '95%',
   },
   optionButton: {
     backgroundColor: '#fff',
@@ -776,45 +771,45 @@ const styles = StyleSheet.create({
     shadowOffset:
       Platform.OS === 'android' ? {width: 0, height: 0} : {width: 0, height: 2},
     shadowOpacity: Platform.OS === 'android' ? 0 : 0.24,
-    shadowRadius: Platform.OS === 'android' ? 0 : 3.84
+    shadowRadius: Platform.OS === 'android' ? 0 : 3.84,
   },
   optionText: {
     fontSize: 14,
-    color: '#333'
+    color: '#333',
   },
   actionsheet: {
     //height: "0%",
     padding: 20,
     justifyContent: 'space-evenly',
     backgroundColor: COLORS.WHITE,
-    borderRadius: 20
+    borderRadius: 20,
   },
   dragHandle: {
     fontSize: 24,
-    color: '#666'
+    color: '#666',
   },
   questionText: {
     //marginTop: scale(10),
     paddingHorizontal: scale(12),
     paddingVertical: scale(5),
-    marginBottom: scale(10)
+    marginBottom: scale(10),
   },
   imageContainer: {
     width: 373,
     height: 200,
     alignSelf: 'center',
-    marginBottom: 10
+    marginBottom: 10,
   },
   borderLine: {
     marginTop: scale(20),
     marginBottom: scale(20),
     borderWidth: 0.3,
     borderColor: COLORS.GRAYTEXTCOLOR,
-    width: '100%'
+    width: '100%',
   },
   image: {
     width: '100%',
-    height: '100%'
+    height: '100%',
   },
   optionContainer: {
     flexDirection: 'row',
@@ -822,20 +817,20 @@ const styles = StyleSheet.create({
     margin: 5,
     //padding: 10,
     borderWidth: 1,
-    borderRadius: 5
+    borderRadius: 5,
     //paddingVertical:scale()
   },
   checkBoxIcon: {
     width: 20,
-    height: 20
+    height: 20,
   },
   answerLabel: {
     paddingHorizontal: scale(10),
-    marginTop: scale(40)
+    marginTop: scale(40),
   },
   courseButtonStyle1: {
     marginTop: scale(25),
     width: '87%',
-    fontWeight: '300'
-  }
+    fontWeight: '300',
+  },
 });

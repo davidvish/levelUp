@@ -13,7 +13,7 @@ import {
   StyleSheet,
   TextInput,
   TouchableOpacity,
-  View
+  View,
 } from 'react-native';
 import {
   RNActionSheet,
@@ -21,7 +21,7 @@ import {
   RNContainer,
   RNImage,
   RNText,
-  RNTextInput
+  RNTextInput,
 } from '../../../Common';
 import {_onPressNavigate, onLogout} from '../../../utils/commonFunction';
 import {COLORS, IMAGES, STRINGS} from '../../../constants';
@@ -31,7 +31,7 @@ import {scale} from 'react-native-size-matters';
 import {CheckBox} from 'react-native-elements';
 import DraggableFlatList, {
   RenderItemParams,
-  DragEndParams
+  DragEndParams,
 } from 'react-native-draggable-flatlist';
 import {GestureHandlerRootView} from 'react-native-gesture-handler';
 import {
@@ -40,7 +40,7 @@ import {
   examAddUserAttemptRequestAction,
   examPlayFailAction,
   examPlayRequestAction,
-  getExamResultRequestAction
+  getExamResultRequestAction,
 } from './module/action';
 import {useDispatch} from 'react-redux';
 import {scromChapterSelector} from './module/reducer';
@@ -56,7 +56,7 @@ const initialData: DataItem[] = [
   {key: '1', label: '9=18+2'},
   {key: '2', label: '9-9'},
   {key: '3', label: '18+2'},
-  {key: '4', label: '=0'}
+  {key: '4', label: '=0'},
 ];
 
 const QuestionCheck = {
@@ -66,12 +66,12 @@ const QuestionCheck = {
   ORDEREDLIST: 'ORDEREDLIST',
   MATCHLIST: 'MATCHLIST',
   CLOZE: 'CLOZE',
-  seventhQuestion: 'seventhQuestion'
+  seventhQuestion: 'seventhQuestion',
 };
 
 const booleanFourthoptions = [
   {id: 1, text: 'True', isCorrect: true},
-  {id: 2, text: 'False', isCorrect: false}
+  {id: 2, text: 'False', isCorrect: false},
 ];
 
 const screenWidth = Dimensions.get('window').width;
@@ -86,7 +86,7 @@ const CourseAIExam: React.FC = (props: any) => {
     examAddUserAttemptLoading,
     examAddUserAttemptData,
     examPlayLoading,
-    examPlayData
+    examPlayData,
   } = scromChapterSelector();
   const ActionSheetClozeNameRef: any = useRef(null);
   const ActionSheetNameRef: any = useRef(null);
@@ -105,7 +105,7 @@ const CourseAIExam: React.FC = (props: any) => {
   const [selectedIndex, setSelectedIndex] = useState(-1);
   const [clozeButtonDisable, setClozeButtonDisable] = useState(true);
   const [clozeButtonSelectedItem, setClozeButtonSelectedItem] = useState<any>(
-    []
+    [],
   );
   const [submitButtonCondtion, setSubmitButtonCondtion] = useState(false);
   const [matchListIndexValue, setMatchListIndexValue] = useState(-1);
@@ -122,7 +122,7 @@ const CourseAIExam: React.FC = (props: any) => {
     Animated.timing(slideAnim, {
       toValue: 0,
       duration: 300,
-      useNativeDriver: true
+      useNativeDriver: true,
     }).start();
   }, [currentCardIndex]);
 
@@ -157,7 +157,7 @@ const CourseAIExam: React.FC = (props: any) => {
       return () => {
         clearState();
       };
-    }, [])
+    }, []),
   );
 
   const addUserAttemptFunction = () => {
@@ -165,7 +165,7 @@ const CourseAIExam: React.FC = (props: any) => {
     const body = {
       EntityId: startExamData?.id || '',
       assignedDate: storeCourseItemData?.assignedDate || '',
-      EntityType: 'EXAM'
+      EntityType: 'EXAM',
     };
     const callback = (res: any) => {
       setLoading(false);
@@ -315,25 +315,20 @@ const CourseAIExam: React.FC = (props: any) => {
       setTimeLeft,
       setAlert20to30Shown,
       setAlert10Shown,
-      handleTimeUp
-    ])
+      handleTimeUp,
+    ]),
   );
 
   useEffect(() => {
     navigation.addListener('blur', () => {
-      BackHandler.removeEventListener(
-        'hardwareBackPress',
-        handleBackButtonClick
-      );
+      BackHandler.addEventListener('hardwareBackPress', handleBackButtonClick);
     });
     navigation.addListener('focus', () => {
       BackHandler.addEventListener('hardwareBackPress', handleBackButtonClick);
     });
     return () => {
-      BackHandler.removeEventListener(
-        'hardwareBackPress',
-        handleBackButtonClick
-      );
+      BackHandler.addEventListener('hardwareBackPress', handleBackButtonClick);
+
       (navigation as any).removeListener('blur');
       (navigation as any).removeListener('focus');
     };
@@ -394,7 +389,7 @@ const CourseAIExam: React.FC = (props: any) => {
       !Array.isArray(hasFilterData.examQuesOptionsList)
     ) {
       Toast.show('Invalid data structure for examQuesOptionsList', {
-        type: 'danger'
+        type: 'danger',
       });
       setLoading(false); // Set loading state to false if there's an error
       return;
@@ -404,7 +399,7 @@ const CourseAIExam: React.FC = (props: any) => {
       (option: any) => {
         if (!option || typeof option !== 'object' || !option.answer) {
           Toast.show('Invalid option object in examQuesOptionsList', {
-            type: 'danger'
+            type: 'danger',
           });
           setLoading(false); // Set loading state to false if there's an error
           return option;
@@ -412,9 +407,9 @@ const CourseAIExam: React.FC = (props: any) => {
 
         return {
           ...option,
-          answer: answerText !== undefined ? answerText : option.answer // Use the provided answerText or keep the existing answer
+          answer: answerText !== undefined ? answerText : option.answer, // Use the provided answerText or keep the existing answer
         };
-      }
+      },
     );
 
     const hasId =
@@ -432,11 +427,11 @@ const CourseAIExam: React.FC = (props: any) => {
             id: hasId ? hasFilterData.id : '',
             type: hasType ? hasFilterData.type : '',
             isStatementTrue: false,
-            examQuesOptionsList: modifiedExamQuesOptionsList
-          }
-        ]
+            examQuesOptionsList: modifiedExamQuesOptionsList,
+          },
+        ],
       },
-      attemptId: examAddUserAttemptData?.attemptId
+      attemptId: examAddUserAttemptData?.attemptId,
     };
 
     const callback = (res: any) => {
@@ -458,7 +453,7 @@ const CourseAIExam: React.FC = (props: any) => {
   const examPlayFunction = () => {
     const body = {
       EntityId: startExamData?.id || '',
-      assignedDate: storeCourseItemData?.assignedDate || ''
+      assignedDate: storeCourseItemData?.assignedDate || '',
     };
     dispatch(examPlayRequestAction({body}));
   };
@@ -479,7 +474,7 @@ const CourseAIExam: React.FC = (props: any) => {
       !Array.isArray(hasFilterData.examQuesOptionsList)
     ) {
       Toast.show('Invalid data structure for examQuesOptionsList', {
-        type: 'danger'
+        type: 'danger',
       });
       setLoading(false);
       return;
@@ -498,7 +493,7 @@ const CourseAIExam: React.FC = (props: any) => {
       selectedOptions = multiSelectedMCQItem.map((item: any) => ({
         id: item?.id,
         answer: item?.answer,
-        isCorrectAnswer: item?.isCorrectAnswer
+        isCorrectAnswer: item?.isCorrectAnswer,
       }));
     } else {
       // For single selection
@@ -507,8 +502,8 @@ const CourseAIExam: React.FC = (props: any) => {
             {
               id: singleMCQItem.id,
               answer: singleMCQItem.answer,
-              isCorrect: singleMCQItem.isCorrect
-            }
+              isCorrect: singleMCQItem.isCorrect,
+            },
           ]
         : [];
     }
@@ -521,11 +516,11 @@ const CourseAIExam: React.FC = (props: any) => {
             id: hasId ? hasFilterData.id : '',
             type: hasType ? hasFilterData.type : '',
             isStatementTrue: false,
-            examQuesOptionsList: selectedOptions
-          }
-        ]
+            examQuesOptionsList: selectedOptions,
+          },
+        ],
       },
-      attemptId: examAddUserAttemptData?.attemptId
+      attemptId: examAddUserAttemptData?.attemptId,
     };
 
     const callback = (res: any) => {
@@ -557,9 +552,9 @@ const CourseAIExam: React.FC = (props: any) => {
             ? item.examQuesOptionsList.map((option: any) => ({
                 id: option?.id || '',
                 answer: option?.answer || '',
-                SequenceNumber: option?.SequenceNumber || 0
+                SequenceNumber: option?.SequenceNumber || 0,
               }))
-            : []
+            : [],
         };
       })
       .filter(Boolean);
@@ -573,7 +568,7 @@ const CourseAIExam: React.FC = (props: any) => {
       !Array.isArray(hasFilterData.examQuesOptionsList)
     ) {
       Toast.show('Invalid data structure for examQuesOptionsList', {
-        type: 'danger'
+        type: 'danger',
       });
       setLoading(false);
       return;
@@ -581,9 +576,9 @@ const CourseAIExam: React.FC = (props: any) => {
     let body = {
       body: {
         isGrouped: true,
-        examQuesList: updatedDataForServer
+        examQuesList: updatedDataForServer,
       },
-      attemptId: examAddUserAttemptData?.attemptId
+      attemptId: examAddUserAttemptData?.attemptId,
     };
 
     const callback = (res: any) => {
@@ -607,8 +602,8 @@ const CourseAIExam: React.FC = (props: any) => {
       {
         Answer: 'string',
         SequenceNumber: 1,
-        Id: '00000000-0000-0000-0000-000000000000'
-      }
+        Id: '00000000-0000-0000-0000-000000000000',
+      },
     ];
     const examPlayCard = examPlayData[currentCardIndex];
     const hasFilterData = examPlayCard?.questionsList?.[0];
@@ -619,7 +614,7 @@ const CourseAIExam: React.FC = (props: any) => {
       !Array.isArray(hasFilterData.examQuesOptionsList)
     ) {
       Toast.show('Invalid data structure for examQuesOptionsList', {
-        type: 'danger'
+        type: 'danger',
       });
       setLoading(false);
       return;
@@ -640,11 +635,11 @@ const CourseAIExam: React.FC = (props: any) => {
             id: hasId ? hasFilterData.id : '',
             type: hasType ? hasFilterData.type : '',
             isStatementTrue: trueAndFalseItem?.isCorrect,
-            examQuesOptionsList: examQuesOptionsList
-          }
-        ]
+            examQuesOptionsList: examQuesOptionsList,
+          },
+        ],
       },
-      attemptId: examAddUserAttemptData?.attemptId
+      attemptId: examAddUserAttemptData?.attemptId,
     };
     const callback = (res: any) => {
       setLoading(false);
@@ -671,7 +666,7 @@ const CourseAIExam: React.FC = (props: any) => {
       !Array.isArray(hasFilterData.examQuesOptionsList)
     ) {
       Toast.show('Invalid data structure for examQuesOptionsList', {
-        type: 'danger'
+        type: 'danger',
       });
       setLoading(false);
       return;
@@ -692,11 +687,11 @@ const CourseAIExam: React.FC = (props: any) => {
             id: hasId ? hasFilterData.id : '',
             type: hasType ? hasFilterData.type : '',
             isStatementTrue: false,
-            examQuesOptionsList: fifthDraggableData
-          }
-        ]
+            examQuesOptionsList: fifthDraggableData,
+          },
+        ],
       },
-      attemptId: examAddUserAttemptData?.attemptId
+      attemptId: examAddUserAttemptData?.attemptId,
     };
 
     const callback = (res: any) => {
@@ -726,7 +721,7 @@ const CourseAIExam: React.FC = (props: any) => {
       !Array.isArray(hasFilterData.examQuesOptionsList)
     ) {
       Toast.show('Invalid data structure for examQuesOptionsList', {
-        type: 'danger'
+        type: 'danger',
       });
       setLoading(false);
       return;
@@ -747,11 +742,11 @@ const CourseAIExam: React.FC = (props: any) => {
             id: hasId ? hasFilterData.id : '',
             type: hasType ? hasFilterData.type : '',
             isStatementTrue: false,
-            examQuesOptionsList: selectedItem
-          }
-        ]
+            examQuesOptionsList: selectedItem,
+          },
+        ],
       },
-      attemptId: examAddUserAttemptData?.attemptId
+      attemptId: examAddUserAttemptData?.attemptId,
     };
 
     const callback = (res: any) => {
@@ -800,7 +795,7 @@ const CourseAIExam: React.FC = (props: any) => {
   const submitButtonFunction = () => {
     let body = {
       attemptId: examAddUserAttemptData?.attemptId || '',
-      assignedDate: storeCourseItemData?.assignedDate || ''
+      assignedDate: storeCourseItemData?.assignedDate || '',
     };
     const callback = (res: any) => {
       if (res !== 'error') {
@@ -813,8 +808,8 @@ const CourseAIExam: React.FC = (props: any) => {
           params: {
             examResultData: res,
             leftTime: timeLeft,
-            startExamData: startExamData
-          }
+            startExamData: startExamData,
+          },
         });
       }
     };
@@ -844,26 +839,26 @@ const CourseAIExam: React.FC = (props: any) => {
       const selectedItemUpdate = selectedItem?.examQuesOptionsList?.map(
         (
           {answer, id, ...rest}: {answer: string; id: string},
-          index: number
+          index: number,
         ) => ({
           answer: answer,
           id: id,
-          SequenceNumber: index + 1
-        })
+          SequenceNumber: index + 1,
+        }),
       );
       const updatedItem = {
         ...hasFilterDataUpdateWithIndex,
-        examQuesOptionsList: selectedItemUpdate
+        examQuesOptionsList: selectedItemUpdate,
       };
       const existingIndex = passingMatchListData.findIndex(
-        (item: any) => item.id === updatedItem.id
+        (item: any) => item.id === updatedItem.id,
       );
       let newPassingMatchListData;
       if (existingIndex !== -1) {
         // If item exists, update it
         newPassingMatchListData = passingMatchListData.map(
           (item: any, index: number) =>
-            index === existingIndex ? updatedItem : item
+            index === existingIndex ? updatedItem : item,
         );
       } else {
         // If item doesn't exist, add it
@@ -895,7 +890,7 @@ const CourseAIExam: React.FC = (props: any) => {
                 alignItems: 'center',
                 backgroundColor: '#DDE1F6',
                 margin: 5,
-                marginBottom: scale(10)
+                marginBottom: scale(10),
               }}>
               <CheckBox
                 checkedIcon={
@@ -954,7 +949,7 @@ const CourseAIExam: React.FC = (props: any) => {
                   flexDirection: 'row',
                   alignItems: 'center',
                   backgroundColor: '#DDE1F6',
-                  marginBottom: scale(10)
+                  marginBottom: scale(10),
                 }}>
                 <CheckBox
                   checkedIcon={
@@ -975,7 +970,7 @@ const CourseAIExam: React.FC = (props: any) => {
                   {item?.answer || ''}
                 </RNText>
               </Pressable>
-            )
+            ),
           )}
         </View>
       </RNActionSheet>
@@ -1002,7 +997,7 @@ const CourseAIExam: React.FC = (props: any) => {
     const updatedData: any = data.map((item: any, index: number) => ({
       answer: item.answer,
       id: item.id,
-      sequenceNumber: index + 1
+      sequenceNumber: index + 1,
     }));
     setFifthDraggableData(updatedData);
     setDraggableBoolean(false);
@@ -1019,8 +1014,8 @@ const CourseAIExam: React.FC = (props: any) => {
             backgroundColor: isActive ? '#f0f0f0' : '#fff',
             justifyContent: 'space-between',
             flexDirection: 'row',
-            alignItems: 'center'
-          }
+            alignItems: 'center',
+          },
         ]}>
         <RNText style={styles.optionText}>{item?.answer || ''}</RNText>
         <Image
@@ -1065,7 +1060,7 @@ const CourseAIExam: React.FC = (props: any) => {
             justifyContent: 'center',
             width: '90%',
             alignItems: 'center',
-            marginTop: scale(10)
+            marginTop: scale(10),
           }}>
           <RNText TextAlignCenter large textColor={COLORS.BORDER_COLOR}>
             No Record Found
@@ -1080,7 +1075,7 @@ const CourseAIExam: React.FC = (props: any) => {
         examPlayCard?.questionsList
       ) {
         const hasDragerData = examPlayCard.questionsList.flatMap(
-          (question: any) => question?.examQuesOptionsList || []
+          (question: any) => question?.examQuesOptionsList || [],
         );
         setFifthDraggableData(hasDragerData);
       }
@@ -1100,7 +1095,7 @@ const CourseAIExam: React.FC = (props: any) => {
               style={{
                 paddingHorizontal: scale(5),
                 paddingVertical: scale(10),
-                marginTop: scale(10)
+                marginTop: scale(10),
               }}>
               <RNText TextAlignCenter small textColor={COLORS.GRAYTEXTCOLOR}>
                 Question{' '}
@@ -1128,7 +1123,7 @@ const CourseAIExam: React.FC = (props: any) => {
                     <View
                       style={[
                         styles.imageContainer,
-                        {backgroundColor: COLORS.WHITE}
+                        {backgroundColor: COLORS.WHITE},
                       ]}>
                       <RNImage
                         resizeMode={'cover'}
@@ -1150,8 +1145,8 @@ const CourseAIExam: React.FC = (props: any) => {
                       styles.textInput,
                       {
                         borderColor: COLORS.WHITE,
-                        backgroundColor: COLORS.WHITE
-                      }
+                        backgroundColor: COLORS.WHITE,
+                      },
                     ]}
                     multiline
                     placeholder="Type your answer here..."
@@ -1181,7 +1176,7 @@ const CourseAIExam: React.FC = (props: any) => {
                     <View
                       style={[
                         styles.imageContainer,
-                        {backgroundColor: COLORS.WHITE}
+                        {backgroundColor: COLORS.WHITE},
                       ]}>
                       <RNImage
                         resizeMode={'cover'}
@@ -1201,7 +1196,7 @@ const CourseAIExam: React.FC = (props: any) => {
                             if (item?.isMultipleAnswers) {
                               handleMultiToggleCheckBox(
                                 optionItem.id,
-                                optionItem
+                                optionItem,
                               );
                             } else {
                               handleToggleCheckBox(index);
@@ -1220,7 +1215,7 @@ const CourseAIExam: React.FC = (props: any) => {
                               ? COLORS.WHITE
                               : '#DDE1F6',
                             margin: 5,
-                            padding: 5
+                            padding: 5,
                           }}>
                           <CheckBox
                             checkedIcon={
@@ -1258,7 +1253,7 @@ const CourseAIExam: React.FC = (props: any) => {
                               if (item?.isMultipleAnswers) {
                                 handleMultiToggleCheckBox(
                                   optionItem.id,
-                                  optionItem
+                                  optionItem,
                                 );
                               } else {
                                 handleToggleCheckBox(index);
@@ -1272,7 +1267,7 @@ const CourseAIExam: React.FC = (props: any) => {
                             {optionItem?.answer || ''}
                           </RNText>
                         </TouchableOpacity>
-                      )
+                      ),
                     )}
                   </View>
                 </React.Fragment>
@@ -1296,7 +1291,7 @@ const CourseAIExam: React.FC = (props: any) => {
                     <View
                       style={[
                         styles.imageContainer,
-                        {backgroundColor: COLORS.WHITE}
+                        {backgroundColor: COLORS.WHITE},
                       ]}>
                       <RNImage
                         resizeMode={'cover'}
@@ -1319,8 +1314,8 @@ const CourseAIExam: React.FC = (props: any) => {
                           styles.optionContainer,
                           {
                             backgroundColor: COLORS.WHITE,
-                            borderColor: COLORS.TRANSPARENT
-                          }
+                            borderColor: COLORS.TRANSPARENT,
+                          },
                         ]}>
                         <CheckBox
                           checked={checkTrueFalseIndex === index}
@@ -1371,7 +1366,7 @@ const CourseAIExam: React.FC = (props: any) => {
                       />
                     </View>
                   </View>
-                )
+                ),
               )}
           </>
         )}
@@ -1391,7 +1386,7 @@ const CourseAIExam: React.FC = (props: any) => {
                     alignSelf: 'center',
                     width: '110%',
                     borderWidth: 0.2,
-                    borderColor: COLORS.GRAYTEXTCOLOR
+                    borderColor: COLORS.GRAYTEXTCOLOR,
                   }}
                 />
                 <View
@@ -1399,14 +1394,14 @@ const CourseAIExam: React.FC = (props: any) => {
                     flexDirection: 'row',
                     justifyContent: 'space-between',
                     alignItems: 'center',
-                    marginTop: scale(20)
+                    marginTop: scale(20),
                   }}>
                   <RNText textColor={COLORS.TEXTCOLOR} medium>
                     {(() => {
                       if (!item || !passingMatchListData) return '';
                       const matchingItem = Array.isArray(passingMatchListData)
                         ? passingMatchListData.find(
-                            data => data?.id === item?.id
+                            data => data?.id === item?.id,
                           )
                         : passingMatchListData?.id === item?.id
                         ? passingMatchListData
@@ -1431,7 +1426,7 @@ const CourseAIExam: React.FC = (props: any) => {
             {Array.isArray(examPlayCard?.questionsList) &&
               examPlayCard?.questionsList?.map((item: any, index: any) => {
                 const correctAnswer = item?.examQuesOptionsList?.find(
-                  (option: any) => option.isCorrectAnswer
+                  (option: any) => option.isCorrectAnswer,
                 )?.answer;
                 const containsCorrectAnswer =
                   item?.title?.includes(correctAnswer);
@@ -1448,7 +1443,7 @@ const CourseAIExam: React.FC = (props: any) => {
                             position: 'absolute',
                             top: 3, // Adjust this value to move the text up
                             textAlign: 'center',
-                            width: '100%'
+                            width: '100%',
                           }}
                           medium
                           textColor={COLORS.TEXTCOLOR}>
@@ -1494,7 +1489,7 @@ const CourseAIExam: React.FC = (props: any) => {
                       <View
                         style={[
                           styles.imageContainer,
-                          {backgroundColor: COLORS.WHITE}
+                          {backgroundColor: COLORS.WHITE},
                         ]}>
                         <RNImage
                           resizeMode={'cover'}
@@ -1548,7 +1543,7 @@ const CourseAIExam: React.FC = (props: any) => {
     submitButtonCondtion,
     multiSelectedMCQItem,
     loading,
-    optionalQuestionCheckAnswer
+    optionalQuestionCheckAnswer,
   ]);
 
   const ThirdButtonBottomView = useMemo(() => {
@@ -1573,7 +1568,7 @@ const CourseAIExam: React.FC = (props: any) => {
     passingMatchListData,
     loading,
     currentCardIndex,
-    handleMultiSubmit
+    handleMultiSubmit,
   ]);
 
   const FourthButtonBottomView = useMemo(() => {
@@ -1592,7 +1587,7 @@ const CourseAIExam: React.FC = (props: any) => {
     submitButtonCondtion,
     checkTrueFalseIndex,
     loading,
-    handleFourthBooleanSubmit
+    handleFourthBooleanSubmit,
   ]);
 
   const FifthButtonBottomView = useMemo(() => {
@@ -1611,7 +1606,7 @@ const CourseAIExam: React.FC = (props: any) => {
     submitButtonCondtion,
     draggableBoolean,
     loading,
-    handleFifthDraggleSubmit
+    handleFifthDraggleSubmit,
   ]);
 
   const SixthButtonBottomView = useMemo(() => {
@@ -1630,7 +1625,7 @@ const CourseAIExam: React.FC = (props: any) => {
     submitButtonCondtion,
     clozeButtonDisable,
     loading,
-    handleSixthDraggleSubmit
+    handleSixthDraggleSubmit,
   ]);
 
   const getBottomChildren = (): React.ReactNode => {
@@ -1647,7 +1642,7 @@ const CourseAIExam: React.FC = (props: any) => {
       [QuestionCheck.MATCHLIST]: ThirdButtonBottomView,
       [QuestionCheck.TRUE_FALSE]: FourthButtonBottomView,
       [QuestionCheck.ORDEREDLIST]: FifthButtonBottomView,
-      [QuestionCheck.CLOZE]: SixthButtonBottomView
+      [QuestionCheck.CLOZE]: SixthButtonBottomView,
     };
 
     const ButtonComponent = buttonComponents[examPlayType];
@@ -1700,15 +1695,15 @@ const styles = StyleSheet.create({
     shadowOffset:
       Platform.OS === 'android' ? {width: 0, height: 0} : {width: 0, height: 2},
     shadowOpacity: Platform.OS === 'android' ? 0 : 1,
-    shadowRadius: Platform.OS === 'android' ? 0 : 3.84
+    shadowRadius: Platform.OS === 'android' ? 0 : 3.84,
   },
   progressContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 6
+    padding: 6,
   },
   progressText: {
-    marginLeft: 20
+    marginLeft: 20,
   },
   textInput: {
     height: scale(110),
@@ -1721,13 +1716,13 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     backgroundColor: COLORS.WHITE,
     fontSize: scale(14),
-    textAlignVertical: 'top' // for Android to align text to the top
+    textAlignVertical: 'top', // for Android to align text to the top
   },
   optionsContainer: {
-    padding: 15
+    padding: 15,
   },
   button: {
-    width: '95%'
+    width: '95%',
   },
   optionButton: {
     backgroundColor: '#fff',
@@ -1739,45 +1734,45 @@ const styles = StyleSheet.create({
     shadowOffset:
       Platform.OS === 'android' ? {width: 0, height: 0} : {width: 0, height: 2},
     shadowOpacity: Platform.OS === 'android' ? 0 : 0.24,
-    shadowRadius: Platform.OS === 'android' ? 0 : 3.84
+    shadowRadius: Platform.OS === 'android' ? 0 : 3.84,
   },
   optionText: {
     fontSize: 14,
-    color: '#333'
+    color: '#333',
   },
   actionsheet: {
     //height: "0%",
     padding: 20,
     justifyContent: 'space-evenly',
     backgroundColor: COLORS.WHITE,
-    borderRadius: 20
+    borderRadius: 20,
   },
   dragHandle: {
     fontSize: 24,
-    color: '#666'
+    color: '#666',
   },
   questionText: {
     //marginTop: scale(10),
     paddingHorizontal: scale(12),
     paddingVertical: scale(5),
-    marginBottom: scale(10)
+    marginBottom: scale(10),
   },
   imageContainer: {
     width: 373,
     height: 200,
     alignSelf: 'center',
-    marginBottom: 10
+    marginBottom: 10,
   },
   borderLine: {
     marginTop: scale(20),
     marginBottom: scale(20),
     borderWidth: 0.3,
     borderColor: COLORS.GRAYTEXTCOLOR,
-    width: '100%'
+    width: '100%',
   },
   image: {
     width: '100%',
-    height: '100%'
+    height: '100%',
   },
   optionContainer: {
     flexDirection: 'row',
@@ -1785,15 +1780,15 @@ const styles = StyleSheet.create({
     margin: 5,
     //padding: 10,
     borderWidth: 1,
-    borderRadius: 5
+    borderRadius: 5,
     //paddingVertical:scale()
   },
   checkBoxIcon: {
     width: 20,
-    height: 20
+    height: 20,
   },
   answerLabel: {
     paddingHorizontal: scale(10),
-    marginTop: scale(40)
-  }
+    marginTop: scale(40),
+  },
 });

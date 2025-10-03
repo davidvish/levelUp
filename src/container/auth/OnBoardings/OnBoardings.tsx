@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, {useEffect, useRef, useState} from 'react';
 import {
   SafeAreaView,
   StyleSheet,
@@ -9,21 +9,21 @@ import {
   StatusBar,
   ScrollView,
 } from 'react-native';
-import Carousel, { Pagination } from 'react-native-snap-carousel';
-import { RNButton, RNImage, RNText } from '../../../Common';
-import { _onPressNavigate } from '../../../utils/commonFunction';
-import { SCREEN_NAMES } from '../../../config';
-import { COLORS, COMMON_SIZE, IMAGES, STRINGS } from '../../../constants';
-import { scale } from 'react-native-size-matters';
-import { useNavigation } from '@react-navigation/native';
-import { navigationRef } from '../../../navigation/rootNavigation';
-import { styles } from './styles';
+import Carousel, {Pagination} from 'react-native-snap-carousel';
+import {RNButton, RNImage, RNText} from '../../../Common';
+import {_onPressNavigate} from '../../../utils/commonFunction';
+import {SCREEN_NAMES} from '../../../config';
+import {COLORS, COMMON_SIZE, IMAGES, STRINGS} from '../../../constants';
+import {scale} from 'react-native-size-matters';
+import {useNavigation} from '@react-navigation/native';
+import {navigationRef} from '../../../navigation/rootNavigation';
+import {styles} from './styles';
 
 const screenWidth = Dimensions.get('window').width;
 const screenHeight = Dimensions.get('window').height;
 const DOT_SIZE = scale(10);
 const OnBoardings = () => {
-  const carouselRef : any = useRef<Carousel<any>>(null);
+  const carouselRef: any = useRef<Carousel<any>>(null);
   const navigation = useNavigation();
   const [activeIndex, setActiveIndex] = useState<any>(0);
   const carouselItems = [
@@ -46,19 +46,14 @@ const OnBoardings = () => {
 
   useEffect(() => {
     navigation.addListener('blur', () => {
-      BackHandler.removeEventListener(
-        'hardwareBackPress',
-        handleBackButtonClick
-      );
+      BackHandler.addEventListener('hardwareBackPress', handleBackButtonClick);
     });
     navigation.addListener('focus', () => {
       BackHandler.addEventListener('hardwareBackPress', handleBackButtonClick);
     });
     return () => {
-      BackHandler.removeEventListener(
-        'hardwareBackPress',
-        handleBackButtonClick
-      );
+      BackHandler.addEventListener('hardwareBackPress', handleBackButtonClick);
+
       (navigation as any).removeListener('blur');
       (navigation as any).removeListener('focus');
     };
@@ -83,7 +78,7 @@ const OnBoardings = () => {
   const PaginationView = () => {
     return (
       <Pagination
-        containerStyle={{ marginTop: scale(15), }}
+        containerStyle={{marginTop: scale(15)}}
         carouselRef={carouselRef}
         tappableDots
         dotsLength={carouselItems?.length}
@@ -108,69 +103,86 @@ const OnBoardings = () => {
 
   const _onPressSkip = () => {
     navigationRef.reset({
-      routes: [{ name: SCREEN_NAMES.AuthNavigation }],
+      routes: [{name: SCREEN_NAMES.AuthNavigation}],
     });
   };
 
-  const _renderItem = ({ item, index }: { item: any; index: number }) => {
+  const _renderItem = ({item, index}: {item: any; index: number}) => {
     return (
       <>
-      <ScrollView showsVerticalScrollIndicator={false}>
-      <View style={{flex:1, width:"100%", alignSelf:"center", alignItems:"center"}}>
-        <RNImage resizeMode={"Cover"} source={item.image} style={styles.banner} />
+        <ScrollView showsVerticalScrollIndicator={false}>
+          <View
+            style={{
+              flex: 1,
+              width: '100%',
+              alignSelf: 'center',
+              alignItems: 'center',
+            }}>
+            <RNImage
+              resizeMode={'Cover'}
+              source={item.image}
+              style={styles.banner}
+            />
 
-        <View style={{marginTop:scale(70)}}>
-        <Title firstText={item.title} />
-        <RNText
-          textColor={COLORS.WHITE}
-          style={styles.subTitletext}
-          numberOfLines={6}
-          TextAlignCenter>
-          {item.subTitle}
-        </RNText>
-        </View>
-        {PaginationView()}
-        </View>
+            <View style={{marginTop: scale(70)}}>
+              <Title firstText={item.title} />
+              <RNText
+                textColor={COLORS.WHITE}
+                style={styles.subTitletext}
+                numberOfLines={6}
+                TextAlignCenter>
+                {item.subTitle}
+              </RNText>
+            </View>
+            {PaginationView()}
+          </View>
         </ScrollView>
       </>
     );
   };
 
   return (
-    <><StatusBar barStyle="light-content" backgroundColor={COLORS.HEADERCOLOR} />
-    <SafeAreaView style={styles.container}>
-      <Carousel
-        loop
-        autoplayInterval={10000}
-        layout={'default'}
-        ref={carouselRef}
-        data={carouselItems}
-        sliderWidth={screenWidth}
-        itemWidth={screenWidth}
-        renderItem={_renderItem}
-        keyExtractor={(item, index) => index?.toString()}
-        onSnapToItem={(index) => setActiveIndex(index)}
-        lockScrollWhileSnapping={true}
-        enableMomentum={false}
-        decelerationRate={0.25} />
+    <>
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor={COLORS.HEADERCOLOR}
+      />
+      <SafeAreaView style={styles.container}>
+        <Carousel
+          loop
+          autoplayInterval={10000}
+          layout={'default'}
+          ref={carouselRef}
+          data={carouselItems}
+          sliderWidth={screenWidth}
+          itemWidth={screenWidth}
+          renderItem={_renderItem}
+          keyExtractor={(item, index) => index?.toString()}
+          onSnapToItem={index => setActiveIndex(index)}
+          lockScrollWhileSnapping={true}
+          enableMomentum={false}
+          decelerationRate={0.25}
+        />
 
-      <RNButton
-        style={styles.button}
-        backgroundColor={COLORS.SKIPSECONDARY}
-        textColor={COLORS.WHITE}
-        onPress={_onPressSkip}
-        title={activeIndex == carouselItems?.length - 1
-          ? STRINGS.next
-          : STRINGS.skip} />
-    </SafeAreaView>
-    
+        <RNButton
+          style={styles.button}
+          backgroundColor={COLORS.SKIPSECONDARY}
+          textColor={COLORS.WHITE}
+          onPress={_onPressSkip}
+          title={
+            activeIndex == carouselItems?.length - 1
+              ? STRINGS.next
+              : STRINGS.skip
+          }
+        />
+      </SafeAreaView>
     </>
   );
 };
 
 export default OnBoardings;
 
-const Title = ({ firstText }: { firstText: any }) => {
+const Title = ({firstText}: {firstText: any}) => {
   return (
     <RNText TextAlignCenter style={[styles.text, styles.title]} bold>
       {firstText}

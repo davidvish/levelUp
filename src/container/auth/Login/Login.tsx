@@ -3,7 +3,7 @@ import {RNButton, RNImage, RNText, RNTextInput} from '../../../Common';
 import {
   _onPressGoBackNavigate,
   _onPressNavigate,
-  vibrate
+  vibrate,
 } from '../../../utils/commonFunction';
 import {scale} from 'react-native-size-matters';
 import {
@@ -16,7 +16,7 @@ import {
   BackHandler,
   Alert,
   Platform,
-  ActivityIndicator
+  ActivityIndicator,
 } from 'react-native';
 import {COLORS, IMAGES, STRINGS} from '../../../constants';
 import {SCREEN_NAMES} from '../../../config';
@@ -31,7 +31,7 @@ import {
   socialAppleRequestAction,
   socialFacebookLoginRequestAction,
   socialGoogleLoginRequestAction,
-  socialMicrosoftLoginRequestAction
+  socialMicrosoftLoginRequestAction,
 } from './module/action';
 import {styles} from './styles';
 import {handleFacebookLogin} from './soicalLogin/faceBookLogin';
@@ -40,13 +40,13 @@ import {GoogleSignin} from '@react-native-google-signin/google-signin';
 import {
   setAuthenticationToken,
   setCompanyId,
-  setUserId
+  setUserId,
 } from '../../../utils/authentication';
 import {
   initializePCA,
   acquireToken,
   getAccounts,
-  acquireTokenSilent
+  acquireTokenSilent,
 } from './soicalLogin/azureLoginComponent';
 import {CheckBox} from 'react-native-elements';
 import {useAppleAuth} from './soicalLogin/AppleLogin';
@@ -61,13 +61,13 @@ const Login = (props: any) => {
   //const [check1, setCheck1] = useState(false);
   const InputRef: any = useRef({
     email: React.createRef(),
-    password: React.createRef()
+    password: React.createRef(),
   });
   const [state, setState] = useState({
     email: '',
     password: '',
     errorMessage: '',
-    rememberMe: false
+    rememberMe: false,
   });
   const {email, password, errorMessage, rememberMe} = state;
   const [loading, setLoading] = useState(false);
@@ -88,7 +88,7 @@ const Login = (props: any) => {
         action: 'SignIn',
         platform: 'MOBILE',
         authorizationCode: response?.data?.authorizationCode,
-        fullName: response?.data?.fullName
+        fullName: response?.data?.fullName,
       };
       let callback = (res: any) => {
         setGoogleLoginLoading(false);
@@ -104,19 +104,13 @@ const Login = (props: any) => {
 
   useEffect(() => {
     navigation.addListener('blur', () => {
-      BackHandler.removeEventListener(
-        'hardwareBackPress',
-        handleBackButtonClick
-      );
+      BackHandler.addEventListener('hardwareBackPress', handleBackButtonClick);
     });
     navigation.addListener('focus', () => {
       BackHandler.addEventListener('hardwareBackPress', handleBackButtonClick);
     });
     return () => {
-      BackHandler.removeEventListener(
-        'hardwareBackPress',
-        handleBackButtonClick
-      );
+      BackHandler.addEventListener('hardwareBackPress', handleBackButtonClick);
       (navigation as any).removeListener('blur');
       (navigation as any).removeListener('focus');
     };
@@ -128,12 +122,12 @@ const Login = (props: any) => {
         text: STRINGS.exit,
         onPress: () => {
           BackHandler.exitApp();
-        }
+        },
       },
       {
         text: STRINGS.cancel,
-        onPress: () => console.log('cancelled')
-      }
+        onPress: () => console.log('cancelled'),
+      },
     ]);
     return true;
   };
@@ -149,7 +143,7 @@ const Login = (props: any) => {
   const _onChangeText = (name: any, value: any) => {
     setState(prev => ({
       ...prev,
-      [name]: value
+      [name]: value,
     }));
   };
 
@@ -159,7 +153,7 @@ const Login = (props: any) => {
         ...prev,
         email: loginDetails?.email,
         password: loginDetails?.password,
-        rememberMe: loginDetails?.rememberMe
+        rememberMe: loginDetails?.rememberMe,
       }));
     }
   }, []);
@@ -180,7 +174,7 @@ const Login = (props: any) => {
       const loginBody = {
         email,
         password,
-        provider: 'Manually'
+        provider: 'Manually',
       };
 
       // Callback to handle the response
@@ -194,7 +188,7 @@ const Login = (props: any) => {
           let body = null;
           vibrate();
           navigationRef.reset({
-            routes: [{name: SCREEN_NAMES.AppNavigation}]
+            routes: [{name: SCREEN_NAMES.AppNavigation}],
           });
           LoggedTimeEntry(res?.data?.accessToken);
         }
@@ -216,10 +210,10 @@ const Login = (props: any) => {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`
+            Authorization: `Bearer ${token}`,
           },
-          body: null
-        }
+          body: null,
+        },
       );
 
       const data = await response.json();
@@ -245,7 +239,7 @@ const Login = (props: any) => {
     setFaceLoginLoading(true);
     try {
       const response = await fetch(
-        `https://graph.facebook.com/me?fields=id,name,email&access_token=${accessToken}`
+        `https://graph.facebook.com/me?fields=id,name,email&access_token=${accessToken}`,
       );
       if (response.ok) {
         setFaceLoginLoading(false);
@@ -281,7 +275,7 @@ const Login = (props: any) => {
     let body = {
       accessToken: idToken, //"eyJhbGciOiJSUzI1NiIsImtpZCI6ImJiNDM0Njk1OTQ0NTE4MjAxNDhiMzM5YzU4OGFlZGUzMDUxMDM5MTkiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJhY2NvdW50cy5nb29nbGUuY29tIiwiYXpwIjoiMTg2MjQxODI2NTIxLTA3bXRtazNkNWk1a2Q4NmZ2cWd2ZHJxY3BuMTlncGdlLmFwcHMuZ29vZ2xldXNlcmNvbnRlbnQuY29tIiwiYXVkIjoiMTg2MjQxODI2NTIxLTA3bXRtazNkNWk1a2Q4NmZ2cWd2ZHJxY3BuMTlncGdlLmFwcHMuZ29vZ2xldXNlcmNvbnRlbnQuY29tIiwic3ViIjoiMTEyOTUyNDUwOTc0NTUzOTkyNzA0IiwiZW1haWwiOiJtYW5vanNoYXJtYS51aWRldkBnbWFpbC5jb20iLCJlbWFpbF92ZXJpZmllZCI6dHJ1ZSwiYXRfaGFzaCI6IkdHLUtzaTBQX01kd3NlZWVKRTM3TUEiLCJuYmYiOjE3NDk0NTAwMjQsIm5hbWUiOiJNYW5vaiBTaGFybWEiLCJwaWN0dXJlIjoiaHR0cHM6Ly9saDMuZ29vZ2xldXNlcmNvbnRlbnQuY29tL2EvQUNnOG9jSUJOUUdYUUo2aG1NZU5VNlc3Zk1JUTItTE5zaDhVZEFidUlfVzVZMllCSml2M2hBPXM5Ni1jIiwiZ2l2ZW5fbmFtZSI6Ik1hbm9qIiwiZmFtaWx5X25hbWUiOiJTaGFybWEiLCJpYXQiOjE3NDk0NTAzMjQsImV4cCI6MTc0OTQ1MzkyNCwianRpIjoiMzQzZGE3NWVmZGRlMjViM2QxMjE2ZDljYTJmZTgzMWI5MTU4MGZkYSJ9.mjdgSuDJ76j2xlzqKdFlN1fY9zTMk6klsDt7oZcUwsUDXkcsjNWY7ELps-SvuYjdq2O1yTumoei7PX5HjeklQRUpS6-cY4I8BIyAHeSPnTMeQyQybXTWuwQdgrSDyDS0JfsU-xL__QaKnbqQCdBLMpaoHqoS3ADOpFSWA6DoNUZOe3_zJjR5cD6QP2ka9hzgJ-HIkVvU3537ipCAziGZhLr9mVKiIvz7qnw3JxowiFqbYzKbBkKBCaWHsmLPL-_ca-bvlZkpTxpZt2GDG_HoxE0qjppq838bjxs5CcmHpSkrxLJdB9VhPate21RegqfOXgCicBecOmhsTg9iOCvhZQ",
       type: 'User',
-      action: 'signin'
+      action: 'signin',
     };
     let callback = (res: any) => {
       setFaceLoginLoading(false);
@@ -344,7 +338,7 @@ const Login = (props: any) => {
       id_token: response?.idToken, //"eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiIsImtpZCI6IkNOdjBPSTNSd3FsSEZFVm5hb01Bc2hDSDJYRSJ9.eyJhdWQiOiIwMTkyMTgyNC0yYmUyLTQ3NzAtYTMxZS05OWRmNDg3ZGI4OTYiLCJpc3MiOiJodHRwczovL2xvZ2luLm1pY3Jvc29mdG9ubGluZS5jb20vYzA2MWYxNjAtNTFmOS00NjkzLThmM2ItNGYxNTMyMzdlOGY0L3YyLjAiLCJpYXQiOjE3NDk0NDM5MzgsIm5iZiI6MTc0OTQ0MzkzOCwiZXhwIjoxNzQ5NDQ3ODM4LCJhaW8iOiJBWVFBZS84WkFBQUF3ekRJdi9uOFFkamFhQXQyblNsZmJCaWZJaUdzeDdJYzRiS1NVY01nOUlyNHMyNXNwaTQzRnFsQjdNNVoyeDBqcjF1dmd1ekZDeUNXU0RHZlhScEhoOEZwWHluMnM3LzcrdTFldE85dnBEM3p2c3h3U21rRjJhWmNnbDBLcUZZVXR0d09hNVFQdEVSTUZHS3RKWU5NSEM0WDRsR2pJMWpkYUxFbVVGTEl4alE9IiwibmFtZSI6Ik1hbm9qIFNoYXJtYSIsIm5vbmNlIjoiMGJiM2RjZGQtMjhmZS00OGUyLTg3NjEtMjczYTEzOTQ4MTE0Iiwib2lkIjoiMWYxZjUxZTItYzA0Yy00OWI1LWI1ZGMtMzJhYTA0NzA2NDg5IiwicHJlZmVycmVkX3VzZXJuYW1lIjoibWFub2ouc2hhcm1hQGV2b2x2b3VzLmNvbSIsInJoIjoiMS5BU2dBWVBGaHdQbFJrMGFQTzA4Vk1qZm85Q1FZa2dIaUszQkhveDZaMzBoOXVKWW9BRFVvQUEuIiwic2lkIjoiMDA1Y2Y0ZjktYTk2Ny05MmY5LWUwNTgtNDE3MTQwZDAzYzY5Iiwic3ViIjoiVzA5WjVLOWRhV0pHOHhIczk3TUd3TjIyaDlHZkJKallFbXB6bzh2WHpqMCIsInRpZCI6ImMwNjFmMTYwLTUxZjktNDY5My04ZjNiLTRmMTUzMjM3ZThmNCIsInV0aSI6IjZBd0NMZkt0aWtlRnhRT0FtOWgtQUEiLCJ2ZXIiOiIyLjAifQ.Nx5ViBi1wUbpqBI0GXfaPbYiVXeDM4dphTLjJ3LLbeffwZob0fbXU7_bQZ53ACuWpL6-ZZbpBRQf8HL1FUjYyxBNZjo76u0xBgrHw_g_TiNb3T0hP5MGSe1XDZtXS3YFmR_vRkjwWgV4lZtgHOeL3O4TTH5GMlaBDUTGopDJSIZKSILMrqRy3ZM5CT3ZnFpcJAd8nBOQEupjqcQUMCtwAg6E4o7LAk5Meh7I_uCs3E71F3gW1rOHNWUJP5glNR1EGu8TfWVFwSX7lqKXxbwIQx4Sa5CsxyBpNEE3Pzb9gvbRrBqZlxsIvBBkGkxDzXSr3oPlc7FnrVPgl1M9Uc7d6Q",
       client_info: '',
       type: 'User',
-      action: 'signin'
+      action: 'signin',
     };
     let callback = (res: any) => {
       setAzureLoginLoading(false);
@@ -365,7 +359,7 @@ const Login = (props: any) => {
     let body = {
       id_token: idToken, //"eyJhbGciOiJSUzI1NiIsImtpZCI6ImJiNDM0Njk1OTQ0NTE4MjAxNDhiMzM5YzU4OGFlZGUzMDUxMDM5MTkiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJhY2NvdW50cy5nb29nbGUuY29tIiwiYXpwIjoiMTg2MjQxODI2NTIxLTA3bXRtazNkNWk1a2Q4NmZ2cWd2ZHJxY3BuMTlncGdlLmFwcHMuZ29vZ2xldXNlcmNvbnRlbnQuY29tIiwiYXVkIjoiMTg2MjQxODI2NTIxLTA3bXRtazNkNWk1a2Q4NmZ2cWd2ZHJxY3BuMTlncGdlLmFwcHMuZ29vZ2xldXNlcmNvbnRlbnQuY29tIiwic3ViIjoiMTEyOTUyNDUwOTc0NTUzOTkyNzA0IiwiZW1haWwiOiJtYW5vanNoYXJtYS51aWRldkBnbWFpbC5jb20iLCJlbWFpbF92ZXJpZmllZCI6dHJ1ZSwiYXRfaGFzaCI6IkdHLUtzaTBQX01kd3NlZWVKRTM3TUEiLCJuYmYiOjE3NDk0NTAwMjQsIm5hbWUiOiJNYW5vaiBTaGFybWEiLCJwaWN0dXJlIjoiaHR0cHM6Ly9saDMuZ29vZ2xldXNlcmNvbnRlbnQuY29tL2EvQUNnOG9jSUJOUUdYUUo2aG1NZU5VNlc3Zk1JUTItTE5zaDhVZEFidUlfVzVZMllCSml2M2hBPXM5Ni1jIiwiZ2l2ZW5fbmFtZSI6Ik1hbm9qIiwiZmFtaWx5X25hbWUiOiJTaGFybWEiLCJpYXQiOjE3NDk0NTAzMjQsImV4cCI6MTc0OTQ1MzkyNCwianRpIjoiMzQzZGE3NWVmZGRlMjViM2QxMjE2ZDljYTJmZTgzMWI5MTU4MGZkYSJ9.mjdgSuDJ76j2xlzqKdFlN1fY9zTMk6klsDt7oZcUwsUDXkcsjNWY7ELps-SvuYjdq2O1yTumoei7PX5HjeklQRUpS6-cY4I8BIyAHeSPnTMeQyQybXTWuwQdgrSDyDS0JfsU-xL__QaKnbqQCdBLMpaoHqoS3ADOpFSWA6DoNUZOe3_zJjR5cD6QP2ka9hzgJ-HIkVvU3537ipCAziGZhLr9mVKiIvz7qnw3JxowiFqbYzKbBkKBCaWHsmLPL-_ca-bvlZkpTxpZt2GDG_HoxE0qjppq838bjxs5CcmHpSkrxLJdB9VhPate21RegqfOXgCicBecOmhsTg9iOCvhZQ",
       type: 'User',
-      action: 'signin'
+      action: 'signin',
     };
     let callback = (res: any) => {
       setGoogleLoginLoading(false);
@@ -384,7 +378,7 @@ const Login = (props: any) => {
       webClientId:
         '186241826521-07mtmk3d5i5kd86fvqgvdrqcpn19gpge.apps.googleusercontent.com', // '646759103590-1lpfj7mrt6301i73p3uqvd267eacrkbd.apps.googleusercontent.com',
       iosClientId:
-        '186241826521-da0kdd3il2sifovob33jli0fbaluh5bt.apps.googleusercontent.com' //'646759103590-p206e09mr8ti33ipqlhr36t71gp1o5rf.apps.googleusercontent.com',
+        '186241826521-da0kdd3il2sifovob33jli0fbaluh5bt.apps.googleusercontent.com', //'646759103590-p206e09mr8ti33ipqlhr36t71gp1o5rf.apps.googleusercontent.com',
     });
     GoogleSignin.hasPlayServices()
       .then(hasPlayService => {
@@ -419,9 +413,9 @@ const Login = (props: any) => {
           method: 'GET',
           headers: {
             Authorization: `Bearer ${res?.accessToken}`,
-            'Content-Type': 'application/json'
-          }
-        }
+            'Content-Type': 'application/json',
+          },
+        },
       );
 
       const rawData = await response.json();
@@ -437,18 +431,18 @@ const Login = (props: any) => {
           Toast.show('Login successful. Welcome!', {type: 'success'});
           vibrate();
           navigationRef.reset({
-            routes: [{name: SCREEN_NAMES.AppNavigation}]
+            routes: [{name: SCREEN_NAMES.AppNavigation}],
           });
         } else {
           Toast.show(
             'Please update your company information on the website before logging in from the mobile app.',
-            {type: 'danger'}
+            {type: 'danger'},
           );
         }
       } else {
         Toast.show(
           rawData?.message || rawData?.error_description || STRINGS.apiError,
-          {type: 'danger'}
+          {type: 'danger'},
         );
       }
       console.log(rawData, 'responseresponse');
@@ -489,7 +483,7 @@ const Login = (props: any) => {
               marginTop: '1%',
               width: screenWidth / 1.1,
               borderBottomWidth: 0.5,
-              alignSelf: 'center'
+              alignSelf: 'center',
             }}
             errorStyle={{marginLeft: '5%'}}
             value={email}
@@ -517,7 +511,7 @@ const Login = (props: any) => {
               marginTop: '1%',
               width: screenWidth / 1.1,
               borderBottomWidth: 0.5,
-              alignSelf: 'center'
+              alignSelf: 'center',
             }}
             value={password}
             secureTextEntry
@@ -537,7 +531,7 @@ const Login = (props: any) => {
               flexDirection: 'row',
               width: '100%',
               justifyContent: 'space-between',
-              alignSelf: 'center'
+              alignSelf: 'center',
             }}>
             <CheckBox
               center
@@ -546,12 +540,12 @@ const Login = (props: any) => {
                 color: COLORS.PRIMARY,
                 fontWeight: '200',
                 fontSize: 14,
-                right: 5
+                right: 5,
               }}
               containerStyle={{
                 backgroundColor: COLORS.TRANSPARENT,
                 marginRight: 50,
-                borderColor: COLORS.TRANSPARENT
+                borderColor: COLORS.TRANSPARENT,
               }}
               checked={rememberMe}
               checkedColor={COLORS.PRIMARY}
@@ -693,7 +687,7 @@ const Login = (props: any) => {
             backgroundColor: COLORS.PRIMARY,
             width: '100%',
             height: '17%',
-            top: Platform.OS === 'android' ? 0 : scale(20)
+            top: Platform.OS === 'android' ? 0 : scale(20),
           }}>
           <RNText style={styles.title} bold>
             {STRINGS.signIn}

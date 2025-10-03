@@ -1,14 +1,14 @@
-import React, { useEffect, useState } from 'react';
-import { StyleSheet, View, Dimensions, BackHandler } from 'react-native';
-import { RNButton, RNContainer, RNImage, RNText } from '../../../Common';
-import { COLORS, IMAGES, STRINGS } from '../../../constants';
-import { scale } from 'react-native-size-matters';
-import { _onPressNavigate } from '../../../utils/commonFunction';
-import { SCREEN_NAMES } from '../../../config';
-import { examAddUserAttemptRequestAction } from './module/action';
-import { useDispatch } from 'react-redux';
-import { homeScreenSelector } from '../Home/module/reducer';
-import { useNavigation } from '@react-navigation/native';
+import React, {useEffect, useState} from 'react';
+import {StyleSheet, View, Dimensions, BackHandler} from 'react-native';
+import {RNButton, RNContainer, RNImage, RNText} from '../../../Common';
+import {COLORS, IMAGES, STRINGS} from '../../../constants';
+import {scale} from 'react-native-size-matters';
+import {_onPressNavigate} from '../../../utils/commonFunction';
+import {SCREEN_NAMES} from '../../../config';
+import {examAddUserAttemptRequestAction} from './module/action';
+import {useDispatch} from 'react-redux';
+import {homeScreenSelector} from '../Home/module/reducer';
+import {useNavigation} from '@react-navigation/native';
 
 const screenWidth = Dimensions.get('window').width;
 
@@ -29,11 +29,11 @@ interface CourseAIExamStartProps {
   };
 }
 
-const CourseAIExamStart: React.FC<CourseAIExamStartProps> = (props) => {
+const CourseAIExamStart: React.FC<CourseAIExamStartProps> = props => {
   const dispatch = useDispatch();
   const navigation = useNavigation();
   const startExamData = props.route.params.startExamData;
-  const { storeCourseItemData } = homeScreenSelector();
+  const {storeCourseItemData} = homeScreenSelector();
   const [loading, setLoading] = useState(false);
 
   const startExamFunction = () => {
@@ -42,19 +42,14 @@ const CourseAIExamStart: React.FC<CourseAIExamStartProps> = (props) => {
 
   useEffect(() => {
     navigation.addListener('blur', () => {
-      BackHandler.removeEventListener(
-        'hardwareBackPress',
-        handleBackButtonClick
-      );
+      BackHandler.addEventListener('hardwareBackPress', handleBackButtonClick);
     });
     navigation.addListener('focus', () => {
       BackHandler.addEventListener('hardwareBackPress', handleBackButtonClick);
     });
     return () => {
-      BackHandler.removeEventListener(
-        'hardwareBackPress',
-        handleBackButtonClick
-      );
+      BackHandler.addEventListener('hardwareBackPress', handleBackButtonClick);
+
       (navigation as any).removeListener('blur');
       (navigation as any).removeListener('focus');
     };
@@ -64,8 +59,8 @@ const CourseAIExamStart: React.FC<CourseAIExamStartProps> = (props) => {
 
   const handleBackButtonClick = () => {
     _onPressNavigate(SCREEN_NAMES.CourseStack, {
-      screen: SCREEN_NAMES.MainCourse
-    })
+      screen: SCREEN_NAMES.MainCourse,
+    });
     return true;
   };
 
@@ -74,7 +69,7 @@ const CourseAIExamStart: React.FC<CourseAIExamStartProps> = (props) => {
       screen: SCREEN_NAMES.CourseAIExam,
       params: {
         startExamData: startExamData,
-      }
+      },
     });
     // setLoading(true);
     // const body = {
@@ -99,7 +94,11 @@ const CourseAIExamStart: React.FC<CourseAIExamStartProps> = (props) => {
   const MainStartView = () => (
     <>
       <View style={styles.mainStartView}>
-        <RNText TextAlignCenter semiBold textColor={COLORS.WHITE} style={styles.examTitle}>
+        <RNText
+          TextAlignCenter
+          semiBold
+          textColor={COLORS.WHITE}
+          style={styles.examTitle}>
           Exam
         </RNText>
         <RNImage source={IMAGES.dCheckList} style={styles.checklistImage} />
@@ -117,7 +116,15 @@ const CourseAIExamStart: React.FC<CourseAIExamStartProps> = (props) => {
       )}
 
       {startExamData?.isTimed && (
-        <View style={[styles.infoRow, { marginTop: startExamData?.isPassingScoreReqd ? scale(10) : scale(50) }]}>
+        <View
+          style={[
+            styles.infoRow,
+            {
+              marginTop: startExamData?.isPassingScoreReqd
+                ? scale(10)
+                : scale(50),
+            },
+          ]}>
           <RNText textColor={COLORS.WHITE} large>
             Allocated Time
           </RNText>
@@ -149,7 +156,8 @@ const CourseAIExamStart: React.FC<CourseAIExamStartProps> = (props) => {
       style={styles.container}
       back={false}
       title=""
-      hideBackgroundImage Points={undefined}>
+      hideBackgroundImage
+      Points={undefined}>
       <MainStartView />
       <ButtonView />
     </RNContainer>

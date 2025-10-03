@@ -7,7 +7,7 @@ import {
   Platform,
   BackHandler,
   Alert,
-  ActivityIndicator
+  ActivityIndicator,
 } from 'react-native';
 import {RNButton, RNContainer, RNImage, RNText} from '../../../Common';
 import {COLORS, IMAGES, STRINGS} from '../../../constants';
@@ -19,7 +19,7 @@ import {scromChapterSelector} from './module/reducer';
 import {
   examAddUserAttemptFailAction,
   gamificationBooleanSuccessAction,
-  getExamResultRequestAction
+  getExamResultRequestAction,
 } from './module/action';
 import {useNavigation} from '@react-navigation/native';
 import {homeScreenSelector} from '../Home/module/reducer';
@@ -27,7 +27,7 @@ import RNModal from '../../../Common/Modal/Modal';
 import {pathSelector} from '../PathStack/module/reducer';
 import {
   CondtionClearAction,
-  CondtionExamClearAction
+  CondtionExamClearAction,
 } from '../PathStack/module/action';
 import LottieView from 'lottie-react-native';
 import {AssignmentnModal} from '../../../Common/Modals/AssignmentModel/AssignmentnModal';
@@ -53,19 +53,14 @@ const CourseAIExamFinish: React.FC = (props: any) => {
   const [assModalVisible, setAssModalVisible] = useState(false);
   useEffect(() => {
     navigation.addListener('blur', () => {
-      BackHandler.removeEventListener(
-        'hardwareBackPress',
-        handleBackButtonClick
-      );
+      BackHandler.addEventListener('hardwareBackPress', handleBackButtonClick);
     });
     navigation.addListener('focus', () => {
       BackHandler.addEventListener('hardwareBackPress', handleBackButtonClick);
     });
     return () => {
-      BackHandler.removeEventListener(
-        'hardwareBackPress',
-        handleBackButtonClick
-      );
+      BackHandler.addEventListener('hardwareBackPress', handleBackButtonClick);
+
       (navigation as any).removeListener('blur');
       (navigation as any).removeListener('focus');
     };
@@ -79,12 +74,12 @@ const CourseAIExamFinish: React.FC = (props: any) => {
           dispatch(CondtionExamClearAction());
           dispatch(examAddUserAttemptFailAction());
           BackHandler.exitApp();
-        }
+        },
       },
       {
         text: STRINGS.cancel,
-        onPress: () => console.log('cancelled')
-      }
+        onPress: () => console.log('cancelled'),
+      },
     ]);
     return true;
   };
@@ -133,8 +128,8 @@ const CourseAIExamFinish: React.FC = (props: any) => {
       _onPressNavigate(SCREEN_NAMES.CourseStack, {
         screen: SCREEN_NAMES.CourseAIExam,
         params: {
-          startExamData: startExamData
-        }
+          startExamData: startExamData,
+        },
       });
     } else {
       setRemainingAtteptsBoolean(true);
@@ -149,7 +144,7 @@ const CourseAIExamFinish: React.FC = (props: any) => {
             styles.textCenter,
             styles.whiteColor,
             styles.fontSize25,
-            styles.horizontalPadding50
+            styles.horizontalPadding50,
           ]}>
           Result
         </RNText>
@@ -225,7 +220,7 @@ const CourseAIExamFinish: React.FC = (props: any) => {
             paddingHorizontal: 10,
             backgroundColor: COLORS.WHITE,
             paddingVertical: 20,
-            width: '90%'
+            width: '90%',
           }}>
           <RNText large bold>
             Attestation
@@ -251,8 +246,8 @@ const CourseAIExamFinish: React.FC = (props: any) => {
               _onPressNavigate(SCREEN_NAMES.CourseStack, {
                 screen: SCREEN_NAMES.AttestationExam,
                 params: {
-                  startAttestionData: coursePlayData
-                }
+                  startAttestionData: coursePlayData,
+                },
               });
             }}
             textColor={COLORS.WHITE}
@@ -272,13 +267,13 @@ const CourseAIExamFinish: React.FC = (props: any) => {
         dispatch(CondtionExamClearAction());
         dispatch(examAddUserAttemptFailAction());
         _onPressNavigate(SCREEN_NAMES.PathStack, {
-          screen: SCREEN_NAMES.MainPath
+          screen: SCREEN_NAMES.MainPath,
         });
       } else if (condtionCourseString == 'coursePath') {
         dispatch(CondtionClearAction());
         dispatch(examAddUserAttemptFailAction());
         _onPressNavigate(SCREEN_NAMES.PathStack, {
-          screen: SCREEN_NAMES.MainPath
+          screen: SCREEN_NAMES.MainPath,
         });
       } else {
         dispatch(CondtionExamClearAction());
@@ -288,12 +283,12 @@ const CourseAIExamFinish: React.FC = (props: any) => {
           dispatch(gamificationBooleanSuccessAction('check'));
           setTimeout(() => {
             _onPressNavigate(SCREEN_NAMES.CourseStack, {
-              screen: SCREEN_NAMES.CoursePreview
+              screen: SCREEN_NAMES.CoursePreview,
             });
           }, 1000);
         } else {
           _onPressNavigate(SCREEN_NAMES.CourseStack, {
-            screen: SCREEN_NAMES.CoursePreview
+            screen: SCREEN_NAMES.CoursePreview,
           });
         }
         setModalVisible(false);
@@ -336,7 +331,7 @@ const CourseAIExamFinish: React.FC = (props: any) => {
             onDoItLater={() => {
               setAssModalVisible(false);
               _onPressNavigate(SCREEN_NAMES.CourseStack, {
-                screen: SCREEN_NAMES.CourseAssignment
+                screen: SCREEN_NAMES.CourseAssignment,
               });
             }}
             isTimeLimit={coursePlayData?.assignmentDetail?.isTimeLimit}
@@ -345,7 +340,7 @@ const CourseAIExamFinish: React.FC = (props: any) => {
             onStartAssignment={() => {
               setAssModalVisible(false);
               _onPressNavigate(SCREEN_NAMES.CourseStack, {
-                screen: SCREEN_NAMES.CourseAssignment
+                screen: SCREEN_NAMES.CourseAssignment,
               });
             }}
             time={formatTime(coursePlayData?.assignmentDetail?.timeDuration)}
@@ -360,20 +355,20 @@ const CourseAIExamFinish: React.FC = (props: any) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.PRIMARY
+    backgroundColor: COLORS.PRIMARY,
   },
   textCenter: {
     textAlign: 'center',
-    marginTop: scale(30)
+    marginTop: scale(30),
   },
   whiteColor: {
-    color: COLORS.WHITE
+    color: COLORS.WHITE,
   },
   fontSize25: {
-    fontSize: scale(25)
+    fontSize: scale(25),
   },
   horizontalPadding50: {
-    paddingHorizontal: scale(50)
+    paddingHorizontal: scale(50),
   },
   centeredBox: {
     justifyContent: 'center',
@@ -390,7 +385,7 @@ const styles = StyleSheet.create({
     shadowOffset:
       Platform.OS === 'android' ? {width: 0, height: 0} : {width: 0, height: 2},
     shadowOpacity: Platform.OS === 'android' ? 5.75 : 0.75,
-    shadowRadius: Platform.OS === 'android' ? 3.75 : 3.84
+    shadowRadius: Platform.OS === 'android' ? 3.75 : 3.84,
     // shadowColor: COLORS.WHITE,
     // shadowOffset: { width: 0, height: 2 },
     // shadowOpacity: 0.25,
@@ -400,16 +395,16 @@ const styles = StyleSheet.create({
   inlineRow: {
     flexDirection: 'row',
     alignSelf: 'center',
-    marginTop: scale(40)
+    marginTop: scale(40),
   },
   largeText: {
-    fontSize: scale(18)
+    fontSize: scale(18),
   },
   extraLargeText: {
-    fontSize: scale(30)
+    fontSize: scale(30),
   },
   buttonView: {
-    marginTop: scale(50)
+    marginTop: scale(50),
   },
   button: {
     width: screenWidth / 1.5,
@@ -418,33 +413,33 @@ const styles = StyleSheet.create({
     height: scale(30),
     borderRadius: 5,
     marginTop: scale(20),
-    paddingHorizontal: 5
+    paddingHorizontal: 5,
   },
   infoRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: scale(80)
+    marginTop: scale(80),
   },
   percentageText: {
     marginLeft: scale(10),
-    fontSize: scale(20)
+    fontSize: scale(20),
   },
   courseButtonStyle1: {
     marginTop: scale(25),
     width: '87%',
-    fontWeight: '300'
+    fontWeight: '300',
   },
   badgeAnimation: {
     width: 80,
     height: 80,
     marginTop: 10,
-    alignSelf: 'center'
+    alignSelf: 'center',
   },
   courseButtonStyle: {
     //marginTop: scale(7),
-    width: '87%'
-  }
+    width: '87%',
+  },
 });
 
 export default CourseAIExamFinish;
