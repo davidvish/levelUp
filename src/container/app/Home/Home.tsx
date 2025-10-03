@@ -2415,11 +2415,11 @@ const Home = (props: any) => {
       hideBackgroundImage>
       {UpcomingEventView()}
       {CountinueLearningView()}
-      <TouchableOpacity
+      {/* <TouchableOpacity
         style={{padding: 15, backgroundColor: 'red'}}
         onPress={() => pickFile()}>
         <Text>Button</Text>
-      </TouchableOpacity>
+      </TouchableOpacity> */}
       {shouldRenderChartView && ChartView()}
       {CircleChartView()}
       {CourseView()}
