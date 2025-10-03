@@ -16,7 +16,7 @@ import {
   TextInput,
   TouchableOpacity,
   useWindowDimensions,
-  View
+  View,
 } from 'react-native';
 import {
   RNActionSheet,
@@ -24,7 +24,7 @@ import {
   RNContainer,
   RNImage,
   RNText,
-  RNTextInput
+  RNTextInput,
 } from '../../../Common';
 import {_onPressNavigate, onLogout} from '../../../utils/commonFunction';
 import {COLORS, IMAGES, STRINGS} from '../../../constants';
@@ -40,13 +40,19 @@ import TimerComponent from './Component/TimerComponent';
 import {
   AssignmentSubmissionRequestAction,
   GetAssignmentRequestAction,
-  GetTimeOnAssignmentDetailRequestAction
+  GetTimeOnAssignmentDetailRequestAction,
 } from './module/action';
 import RenderHTML from 'react-native-render-html';
 import {G} from 'react-native-svg';
 import {handleDownload} from '../../../helper/downloadFile';
 import {call} from 'redux-saga/effects';
 import {requestStoragePermission} from '../../../utils/permissions';
+import {pickDocument} from '../../../helper/documentPicker';
+import {
+  initOAuthSettings,
+  OAuthSettingsLms,
+} from '../../../assets/json/CloudOAuthSettings';
+import {uploadToAzure} from '../../../helper/azureUpload';
 
 const CourseAssignment: React.FC = (props: any) => {
   const {width} = useWindowDimensions();
@@ -70,7 +76,7 @@ const CourseAssignment: React.FC = (props: any) => {
   const isStartDateTime = GetTimeOnAssignmentDetailData?.startDate; // Assignment start time from server
 
   const [isSubmissionDateTime, setIsSubmissionDateTime] = useState(
-    new Date('2025-09-23T07:06:27.211Z')
+    new Date('2025-09-23T07:06:27.211Z'),
   );
   const isTotalTimeAllocated = GetAssignmentData?.timeDuration; // Total time allocated for the assignment
   const isOldTimeSpent = GetTimeOnAssignmentDetailData?.timeSpent; // Old time spent from server
@@ -78,18 +84,22 @@ const CourseAssignment: React.FC = (props: any) => {
   const [isCurrentTimeSpent, setIsCurrentTimeSpent] = useState(0); // Current time spent in this session
   const [isTotalTimeLeft, setIsTotalTimeLeft] = useState(0);
   const timeSpentRef = useRef(0);
+  const [uploadFileName, setUploadFileName] = useState();
+  const [file, setFile] = useState<any>(null);
+
+  console.log('GetAssignmentData', GetAssignmentData);
 
   // console.log(isOldTimeSpent, 'isCurrentTimeSpent', isCurrentTimeSpent);
 
   const handleGetAssignment = () => {
     const body = {
-      id: coursePlayData?.assignmentDetail?.id
+      id: coursePlayData?.assignmentDetail?.id,
     };
 
     // Validate required fields in body
     if (!body.id) {
       (global as any).Toast.show('Missing required data for submission', {
-        type: 'danger'
+        type: 'danger',
       });
       setLoading(false);
       return;
@@ -106,13 +116,13 @@ const CourseAssignment: React.FC = (props: any) => {
 
   const handleGetTimeOnAssignmentDetail = () => {
     const body = {
-      id: coursePlayData?.userProgress?.id
+      id: coursePlayData?.userProgress?.id,
     };
 
     // Validate required fields in body
     if (!body.id) {
       (global as any).Toast.show('Missing required data for submission', {
-        type: 'danger'
+        type: 'danger',
       });
       setLoading(false);
       return;
@@ -130,7 +140,7 @@ const CourseAssignment: React.FC = (props: any) => {
   useEffect(() => {
     const time = Math.max(
       0,
-      isTotalTimeAllocated - (isOldTimeSpent + (isCurrentTimeSpent || 0))
+      isTotalTimeAllocated - (isOldTimeSpent + (isCurrentTimeSpent || 0)),
     );
     console.log(
       'time left =',
@@ -138,7 +148,7 @@ const CourseAssignment: React.FC = (props: any) => {
       'old =',
       isOldTimeSpent,
       'current =',
-      isCurrentTimeSpent
+      isCurrentTimeSpent,
     );
     setIsTotalTimeLeft(time);
   }, []);
@@ -147,7 +157,7 @@ const CourseAssignment: React.FC = (props: any) => {
     useCallback(() => {
       handleGetAssignment();
       handleGetTimeOnAssignmentDetail();
-    }, [])
+    }, []),
   );
 
   const TimerView = () => {
@@ -163,20 +173,20 @@ const CourseAssignment: React.FC = (props: any) => {
           height: scale(30),
           backgroundColor: isTotalTimeLeft <= 300 ? 'red' : '#2BBB84', // ✅ Change color here
           marginTop: scale(10),
-          borderRadius: 5
+          borderRadius: 5,
         }}>
         <RNImage
           source={IMAGES.miniClock}
           style={{right: 3, width: scale(10), height: scale(10)}}
         />
-        <TimerComponent
+        {/* <TimerComponent
           initialTimeInSeconds={isTotalTimeLeft}
           onTimeUp={() => console.log('Time is up!')}
           onTimerCountChange={(count: number) => {
             timeSpentRef.current = count; // ✅ persist latest value
             setIsCurrentTimeSpent(count); // still update state for UI
           }}
-        />
+        /> */}
       </View>
     );
   };
@@ -211,7 +221,7 @@ const CourseAssignment: React.FC = (props: any) => {
             padding: scale(15),
             marginTop: scale(20),
             width: '100%',
-            backgroundColor: COLORS.WHITE
+            backgroundColor: COLORS.WHITE,
           }}>
           <RNText medium>Assignment Summary</RNText>
           {dropDownButtonConditions ? (
@@ -240,12 +250,12 @@ const CourseAssignment: React.FC = (props: any) => {
               padding: scale(15),
               marginTop: scale(0),
               width: '100%',
-              backgroundColor: COLORS.WHITE
+              backgroundColor: COLORS.WHITE,
             }}>
             <RenderHTML
               contentWidth={width}
               source={{
-                html: GetAssignmentData?.requirement || ''
+                html: GetAssignmentData?.requirement || '',
               }}
             />
             {/* <View style={{ borderBottomWidth: 1, borderBottomColor: "red", }} /> */}
@@ -259,7 +269,7 @@ const CourseAssignment: React.FC = (props: any) => {
                 flexDirection: 'row',
                 marginTop: scale(20),
                 justifyContent: 'space-between',
-                alignItems: 'center'
+                alignItems: 'center',
               }}>
               <RNImage
                 source={IMAGES.PdfSmallIcon}
@@ -319,6 +329,27 @@ const CourseAssignment: React.FC = (props: any) => {
   useEffect(() => {
     requestStoragePermission();
   }, []);
+
+  useEffect(() => {
+    initOAuthSettings().then(() => {
+      console.log('OAuth settings loaded:', OAuthSettingsLms);
+    });
+  }, []);
+
+  const handleUpload = async () => {
+    const localFile = await pickDocument();
+    const fileName =
+      localFile?.fileName || localFile?.localUri?.split('/').pop();
+    setUploadFileName(fileName);
+    if (!localFile) return;
+
+    const container =
+      OAuthSettingsLms.azureBlobStorageFileContainer || 'default';
+    const fileUrl = await uploadToAzure(localFile, container);
+
+    // console.log('File uploaded to Azure:', fileUrl, localFile);
+  };
+
   const UploadFileView = () => {
     return (
       <>
@@ -326,7 +357,7 @@ const CourseAssignment: React.FC = (props: any) => {
           style={{
             flexDirection: 'row',
             marginTop: scale(20),
-            alignItems: 'center'
+            alignItems: 'center',
           }}>
           <RNText large>Upload File</RNText>
           <RNText style={{marginLeft: scale(10)}} textColor="#989AA0" medium>
@@ -338,24 +369,24 @@ const CourseAssignment: React.FC = (props: any) => {
             flexDirection: 'row',
             alignItems: 'center',
             justifyContent: 'space-between',
-            marginTop: scale(10)
+            marginTop: scale(10),
           }}>
           <View
             style={{
               padding: scale(15),
               width: '70%',
-              backgroundColor: COLORS.WHITE
+              backgroundColor: COLORS.WHITE,
             }}>
             <RNText textColor="#9398A4" medium>
-              Please upload your file
+              {uploadFileName ? uploadFileName : ' Please upload your file'}
             </RNText>
           </View>
           <Pressable
-            onPress={pickFile}
+            onPress={handleUpload}
             style={{
               padding: scale(15),
               width: '30%',
-              backgroundColor: '#E3EAF9'
+              backgroundColor: '#E3EAF9',
             }}>
             <RNText TextAlignCenter textColor="#4284F3" medium>
               UPLOAD
@@ -387,7 +418,7 @@ const CourseAssignment: React.FC = (props: any) => {
             paddingHorizontal: scale(20),
             backgroundColor: COLORS.WHITE,
             paddingVertical: 20,
-            width: scale(300)
+            width: scale(300),
           }}>
           <RNImage
             onPress={() => setSubmitModalVisible(false)}
@@ -412,7 +443,7 @@ const CourseAssignment: React.FC = (props: any) => {
               style={{
                 flexDirection: 'row',
                 alignItems: 'center',
-                marginTop: scale(20)
+                marginTop: scale(20),
               }}>
               <RNImage
                 source={IMAGES.informationIcon}
@@ -460,22 +491,8 @@ const CourseAssignment: React.FC = (props: any) => {
   };
 
   const handleSubmitAssignment = () => {
-    console.log('Assignment submitted');
-    // if (
-    //   !yourResponse ||
-    //   !isResponseFileUrl ||
-    //   !isFileSize ||
-    //   !isStartDateTime ||
-    //   !isSubmissionDateTime ||
-    //   !isTimeSpent
-    // ) {
-    //   Alert.alert('Please fill all required fields before submitting.');
-    //   return;
-    // }
-    // if (isCurrentTimeSpent <= 0) {
-    //   console.log('isCurrentTimeSpent', isCurrentTimeSpent);
-    //   return Alert.alert('You have not spent any time on the assignment.');
-    // }
+    // console.log('Assignment submitted');
+    // const uploadedfileUrl = uploadToAzure;
     const body = {
       assignmentId: GetAssignmentData?.assignmentId, //Done
       resourseMappingId: coursePlayData?.userProgress?.id, //Done
@@ -485,13 +502,13 @@ const CourseAssignment: React.FC = (props: any) => {
       startDate: isStartDateTime, // Done
       submissionDate: isSubmissionDateTime, //Pending '2025-09-23T05:03:41.131Z',
       timeSpent: timeSpentRef.current, //Pending
-      isSubmissionComplete: isSubmission //Done
+      isSubmissionComplete: isSubmission, //Done
     };
     setLoading(true);
     const callback = (res: any) => {
       setLoading(false);
       if (res !== 'error') {
-        console.log('Submission Success:', res);
+        //console.log('Submission Success:', res);
         if (isSubmission) {
           setSubmitModalVisible(true);
         }
@@ -515,18 +532,13 @@ const CourseAssignment: React.FC = (props: any) => {
       return () => {
         submitOnce();
       };
-    }, [])
+    }, []),
   );
 
   // --- Navigation back ---
   useEffect(() => {
-    console.log('start Back');
-
     const unsubscribe = navigation.addListener('beforeRemove', () => {
-      console.log('Middle Back');
-
       submitOnce();
-      console.log('end Back');
     });
     return unsubscribe;
   }, [navigation]);
@@ -539,7 +551,7 @@ const CourseAssignment: React.FC = (props: any) => {
         if (nextAppState === 'background' || nextAppState === 'inactive') {
           submitOnce();
         }
-      }
+      },
     );
 
     return () => subscription.remove();
@@ -587,7 +599,7 @@ const CourseAssignment: React.FC = (props: any) => {
             onStartAttestation={() => {
               setAttModalVisible(false);
               _onPressNavigate('AttestationExam', {
-                startExamData: startExamData
+                startExamData: startExamData,
               });
             }}
           />
@@ -601,11 +613,11 @@ export default CourseAssignment;
 
 const styles = StyleSheet.create({
   button: {
-    width: '95%'
+    width: '95%',
   },
   courseButtonStyle: {
     marginTop: scale(7),
-    width: '100%'
+    width: '100%',
   },
   textInput: {
     borderRadius: 5,
@@ -614,6 +626,6 @@ const styles = StyleSheet.create({
     width: '100%',
     minHeight: scale(100), // Set minimum height instead of fixed height
     marginTop: scale(10),
-    textAlignVertical: 'top' // Align text to top on Android
-  }
+    textAlignVertical: 'top', // Align text to top on Android
+  },
 });

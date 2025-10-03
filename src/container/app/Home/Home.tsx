@@ -64,6 +64,7 @@ import {loginSelector} from '../../auth/Login/module/reducer';
 import {getValue, setAuthenticationToken} from '../../../utils/authentication';
 import {refreshTokenRequestAction} from '../../auth/Login/module/action';
 //import DocumentPicker, {types} from 'react-native-document-picker';
+import {pick, keepLocalCopy} from '@react-native-documents/picker';
 
 const formatDuration = (minutes: number) => {
   const hours = Math.floor(minutes / 60);
@@ -197,6 +198,7 @@ const Home = (props: any) => {
     CHATCOLOR1: COLORS.CHATCOLOR2, // Replace with your actual color value
     CHATCOLOR2: COLORS.CHATCOLOR1, // Replace with your actual color value
   };
+  const [localFile, setLocalFile] = useState<any>(null);
 
   // Define type for bar chart data
   interface BarChartData {
@@ -704,7 +706,30 @@ const Home = (props: any) => {
     );
   };
 
-  // const pickFile = async () => {
+  const pickDocument = async () => {
+    try {
+      // Step 1: Pick a document
+      const [file] = await pick();
+
+      // Step 2: Copy it locally inside app sandbox
+      const [localCopy] = await keepLocalCopy({
+        files: [
+          {
+            uri: file.uri,
+            fileName: file.name ?? 'fallbackName',
+          },
+        ],
+        destination: 'documentDirectory', // or 'cacheDirectory'
+      });
+
+      console.log('Picked file:', file);
+      console.log('Local copy:', localCopy);
+
+      setLocalFile(localCopy);
+    } catch (err) {
+      console.warn('Error picking document', err);
+    }
+  };
   //   try {
   //     console.log('DocumentPicker object:', DocumentPicker);
 
@@ -2415,11 +2440,6 @@ const Home = (props: any) => {
       hideBackgroundImage>
       {UpcomingEventView()}
       {CountinueLearningView()}
-      {/* <TouchableOpacity
-        style={{padding: 15, backgroundColor: 'red'}}
-        onPress={() => pickFile()}>
-        <Text>Button</Text>
-      </TouchableOpacity> */}
       {shouldRenderChartView && ChartView()}
       {CircleChartView()}
       {CourseView()}

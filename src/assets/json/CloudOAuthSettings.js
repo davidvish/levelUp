@@ -1,3 +1,5 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
 // export const OAuthSettings = {
 //   azureBlobStorageSASToken:"sv=2020-02-10&ss=bfqt&srt=sco&sp=rwdlacupx&se=2091-05-04T13:56:56Z&st=2021-05-04T05:56:56Z&spr=https&sig=P4Rmd0mjprH4pBt8sWaZ97GdHbO3MpHgZAmkLixO0CQ%3D",
 //   azureBlobStorageName:"leveluplmsdevstorage", //hai
@@ -9,15 +11,33 @@
 //   //https://leveluplmsdevstorage.blob.core.windows.net/virtcochatimage?sp=racwdl&st=2022-02-10T07:1…
 //   scopes: ["user.read", "calendars.readWrite", "files.read"], //hai
 // };
+
 export const OAuthSettingsLms = {
-  azureBlobStorageSASToken:"sv=2020-02-10&ss=bfqt&srt=sco&sp=rwdlacupx&se=2091-05-04T13:56:56Z&st=2021-05-04T05:56:56Z&spr=https&sig=P4Rmd0mjprH4pBt8sWaZ97GdHbO3MpHgZAmkLixO0CQ%3D",
-  azureBlobStorageName:"leveluplmsdevstorage",
-  azureBlobStorageImageContainer: localStorage.getItem('companyId'), //you can get it from storage after login
-  azureBlobStorageFileContainer: localStorage.getItem('companyId'),
-  azureBlobImageStorageContainerName: localStorage.getItem('companyId'),
+  azureBlobStorageSASToken:
+    "sv=2020-02-10&ss=bfqt&srt=sco&sp=rwdlacupx&se=2091-05-04T13:56:56Z&st=2021-05-04T05:56:56Z&spr=https&sig=P4Rmd0mjprH4pBt8sWaZ97GdHbO3MpHgZAmkLixO0CQ%3D",
+  azureBlobStorageName: "leveluplmsdevstorage",
+  // we’ll load containers dynamically with helper
+  azureBlobStorageImageContainer: null,
+  azureBlobStorageFileContainer: null,
+  azureBlobImageStorageContainerName: null,
   imageHost: "https://leveluplmsdevstorage.blob.core.windows.net/",
   scopes: ["user.read", "calendars.readWrite", "files.read"],
 };
+
+/**
+ * Loads dynamic companyId from AsyncStorage and updates OAuthSettingsLms.
+ */
+export const initOAuthSettings = async () => {
+  const companyId = await AsyncStorage.getItem('companyId');
+  console.log(companyId,"CompanyID");
+  
+  if (companyId) {
+    OAuthSettingsLms.azureBlobStorageImageContainer = companyId;
+    OAuthSettingsLms.azureBlobStorageFileContainer = companyId;
+    OAuthSettingsLms.azureBlobImageStorageContainerName = companyId;
+  }
+};
+
 
 // export const dev ={
 //     appRemote: "https://leveluplmsdev-ui.azurewebsites.net/remote/remoteEntry.js?v=62",

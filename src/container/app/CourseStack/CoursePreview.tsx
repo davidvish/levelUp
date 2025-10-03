@@ -142,10 +142,6 @@ const CoursePreview: React.FC = (props: any) => {
   const [attModalVisible, setAttModalVisible] = useState(false);
   const [assModalVisible, setAssModalVisible] = useState(false);
 
-  console.log('====================================');
-  console.log(flashcardPreviewDetailsData);
-  console.log('====================================');
-
   const ActionSheetRef: any = useRef(null);
 
   const _onPressChangeProfileName = () => {
