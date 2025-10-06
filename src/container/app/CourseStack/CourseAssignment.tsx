@@ -86,8 +86,9 @@ const CourseAssignment: React.FC = (props: any) => {
   const timeSpentRef = useRef(0);
   const [isUploadFileName, setIsUploadFileName] = useState();
   const [isFileUrl, setIsFileUrl] = useState<any>(null);
+  const lastUpdateRef = useRef(0);
 
-  console.log('uploadFileName', GetAssignmentData);
+  console.log('uploadFileName', timeSpentRef);
 
   // console.log(isOldTimeSpent, 'isCurrentTimeSpent', isCurrentTimeSpent);
 
@@ -179,14 +180,13 @@ const CourseAssignment: React.FC = (props: any) => {
           source={IMAGES.miniClock}
           style={{right: 3, width: scale(10), height: scale(10)}}
         />
-        {/* <TimerComponent
+        <TimerComponent
           initialTimeInSeconds={isTotalTimeLeft}
           onTimeUp={() => console.log('Time is up!')}
-          onTimerCountChange={(count: number) => {
-            timeSpentRef.current = count; // ✅ persist latest value
-            setIsCurrentTimeSpent(count); // still update state for UI
+          onTimerCountChange={count => {
+            timeSpentRef.current = count; // accurate elapsed time for submission
           }}
-        /> */}
+        />
       </View>
     );
   };
@@ -554,6 +554,8 @@ const CourseAssignment: React.FC = (props: any) => {
         timeSpent: timeSpentRef.current,
         isSubmissionComplete: isSubmission,
       };
+
+      //    console.log('bodybody', body);
 
       // 📨 API call
       const callback = (res: any) => {
