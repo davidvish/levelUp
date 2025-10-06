@@ -3,8 +3,8 @@ import { OAuthSettingsLms } from '../assets/json/CloudOAuthSettings';
 
 export const uploadToAzure = async (localFile: any, containerName: string) => {
 
-    console.log("ContainerName",containerName);
-    
+  console.log("localFile",localFile);
+  
   try {
     if (!localFile?.localUri) throw new Error('localUri missing');
 
@@ -36,7 +36,7 @@ export const uploadToAzure = async (localFile: any, containerName: string) => {
       },
       body: binary, // ⚡ Here you pass the binary, not base64
     });
-    console.log(response);
+    console.log("response",response);
     
 
     if (!response.ok) throw new Error(`Upload failed: ${response.status}`);

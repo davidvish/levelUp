@@ -68,7 +68,7 @@ const CourseAssignment: React.FC = (props: any) => {
     useState(false);
   const [submitModalVisible, setSubmitModalVisible] = useState(false);
   const [attModalVisible, setAttModalVisible] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [yourResponse, setYourResponse] = useState('');
   const [isSubmission, setIsSubmission] = useState(false);
   const [isResponseFileUrl, setIsResponseFileUrl] = useState(null);
@@ -84,10 +84,10 @@ const CourseAssignment: React.FC = (props: any) => {
   const [isCurrentTimeSpent, setIsCurrentTimeSpent] = useState(0); // Current time spent in this session
   const [isTotalTimeLeft, setIsTotalTimeLeft] = useState(0);
   const timeSpentRef = useRef(0);
-  const [uploadFileName, setUploadFileName] = useState();
-  const [file, setFile] = useState<any>(null);
+  const [isUploadFileName, setIsUploadFileName] = useState();
+  const [isFileUrl, setIsFileUrl] = useState<any>(null);
 
-  console.log('GetAssignmentData', GetAssignmentData);
+  console.log('uploadFileName', GetAssignmentData);
 
   // console.log(isOldTimeSpent, 'isCurrentTimeSpent', isCurrentTimeSpent);
 
@@ -101,11 +101,11 @@ const CourseAssignment: React.FC = (props: any) => {
       (global as any).Toast.show('Missing required data for submission', {
         type: 'danger',
       });
-      setLoading(false);
+      setIsLoading(false);
       return;
     }
     const callback = (res: any) => {
-      setLoading(false);
+      setIsLoading(false);
       if (res !== 'error') {
         console.log('succsess');
       }
@@ -124,11 +124,11 @@ const CourseAssignment: React.FC = (props: any) => {
       (global as any).Toast.show('Missing required data for submission', {
         type: 'danger',
       });
-      setLoading(false);
+      setIsLoading(false);
       return;
     }
     const callback = (res: any) => {
-      setLoading(false);
+      setIsLoading(false);
       if (res !== 'error') {
         console.log(res);
       }
@@ -338,16 +338,15 @@ const CourseAssignment: React.FC = (props: any) => {
 
   const handleUpload = async () => {
     const localFile = await pickDocument();
-    const fileName =
-      localFile?.fileName || localFile?.localUri?.split('/').pop();
-    setUploadFileName(fileName);
     if (!localFile) return;
 
-    const container =
-      OAuthSettingsLms.azureBlobStorageFileContainer || 'default';
-    const fileUrl = await uploadToAzure(localFile, container);
+    const fileName =
+      localFile?.fileName || localFile?.localUri?.split('/').pop();
+    setIsUploadFileName(fileName);
+    setIsFileUrl(localFile); // store only local file
+    setIsFileSize(localFile.fileSizeMB.toFixed(2)); // Optional: track size for API
 
-    // console.log('File uploaded to Azure:', fileUrl, localFile);
+    console.log('📄 File selected:', localFile);
   };
 
   const UploadFileView = () => {
@@ -378,7 +377,7 @@ const CourseAssignment: React.FC = (props: any) => {
               backgroundColor: COLORS.WHITE,
             }}>
             <RNText textColor="#9398A4" medium>
-              {uploadFileName ? uploadFileName : ' Please upload your file'}
+              {isUploadFileName ? isUploadFileName : ' Please upload your file'}
             </RNText>
           </View>
           <Pressable
@@ -490,33 +489,88 @@ const CourseAssignment: React.FC = (props: any) => {
     );
   };
 
-  const handleSubmitAssignment = () => {
-    // console.log('Assignment submitted');
-    // const uploadedfileUrl = uploadToAzure;
-    const body = {
-      assignmentId: GetAssignmentData?.assignmentId, //Done
-      resourseMappingId: coursePlayData?.userProgress?.id, //Done
-      responseText: yourResponse, //Done
-      responseFileUrl: isResponseFileUrl, //Pending
-      fileSize: isFileSize, //Pending
-      startDate: isStartDateTime, // Done
-      submissionDate: isSubmissionDateTime, //Pending '2025-09-23T05:03:41.131Z',
-      timeSpent: timeSpentRef.current, //Pending
-      isSubmissionComplete: isSubmission, //Done
-    };
-    setLoading(true);
-    const callback = (res: any) => {
-      setLoading(false);
-      if (res !== 'error') {
-        //console.log('Submission Success:', res);
-        if (isSubmission) {
-          setSubmitModalVisible(true);
+  const handleSubmitAssignment = async () => {
+    try {
+      const isFileUploadAllowed = GetAssignmentData?.isFileUploadAllowed;
+      const isTextAllowed = GetAssignmentData?.isTextAllowed;
+
+      const hasLocalFile = !!isFileUrl; // local file (not yet uploaded)
+      const hasText = yourResponse?.trim()?.length > 0;
+
+      console.log('Has Text', hasText);
+
+      // 🧩 Validation
+      if (isFileUploadAllowed && isTextAllowed) {
+        // 👉 Both are required
+        if (!hasLocalFile && !hasText) {
+          Alert.alert('Please upload a file and enter text before submitting.');
+          return;
+        } else if (!hasLocalFile) {
+          Alert.alert('Please upload a file before submitting.');
+          return;
+        } else if (!hasText) {
+          Alert.alert('Please enter your response before submitting.');
+          return;
         }
-      } else {
-        Alert.alert('Submission failed. Please try again.');
+      } else if (isFileUploadAllowed && !hasLocalFile) {
+        // 👉 Only file is required
+        Alert.alert('Please upload a file before submitting.');
+        return;
+      } else if (isTextAllowed && !hasText) {
+        // 👉 Only text is required
+        Alert.alert('Please enter your response before submitting.');
+        return;
       }
-    };
-    dispatch(AssignmentSubmissionRequestAction({body, callback}));
+
+      setIsLoading(true);
+
+      let uploadedFileUrl = isResponseFileUrl;
+
+      // 🟦 Upload to Azure only when file upload is allowed and local file exists
+      if (isFileUploadAllowed && isFileUrl) {
+        try {
+          const container =
+            OAuthSettingsLms.azureBlobStorageFileContainer || 'default';
+          uploadedFileUrl = await uploadToAzure(isFileUrl, container); // Upload here
+          setIsResponseFileUrl(uploadedFileUrl); // Store Azure URL
+          console.log('✅ Uploaded to Azure:', uploadedFileUrl);
+        } catch (uploadError) {
+          console.error('Azure upload failed:', uploadError);
+          setIsLoading(false);
+          Alert.alert('File upload failed', 'Please try again.');
+          return;
+        }
+      }
+
+      // 🧾 Prepare request body
+      const body = {
+        assignmentId: GetAssignmentData?.assignmentId,
+        resourseMappingId: coursePlayData?.userProgress?.id,
+        responseText: isTextAllowed ? yourResponse : '',
+        responseFileUrl: isFileUploadAllowed ? uploadedFileUrl : '',
+        fileSize: isFileSize,
+        startDate: isStartDateTime,
+        submissionDate: new Date().toISOString(),
+        timeSpent: timeSpentRef.current,
+        isSubmissionComplete: isSubmission,
+      };
+
+      // 📨 API call
+      const callback = (res: any) => {
+        setIsLoading(false);
+        if (res !== 'error') {
+          if (isSubmission) setSubmitModalVisible(true);
+        } else {
+          Alert.alert('Submission failed. Please try again.');
+        }
+      };
+
+      dispatch(AssignmentSubmissionRequestAction({body, callback}));
+    } catch (error) {
+      setIsLoading(false);
+      console.error('Submission error:', error);
+      Alert.alert('Something went wrong', 'Please try again.');
+    }
   };
 
   const submitOnce = () => {
@@ -530,6 +584,8 @@ const CourseAssignment: React.FC = (props: any) => {
   useFocusEffect(
     useCallback(() => {
       return () => {
+        console.log('First Call');
+
         submitOnce();
       };
     }, []),
@@ -538,29 +594,34 @@ const CourseAssignment: React.FC = (props: any) => {
   // --- Navigation back ---
   useEffect(() => {
     const unsubscribe = navigation.addListener('beforeRemove', () => {
+      console.log('Second  Call');
+
       submitOnce();
     });
     return unsubscribe;
   }, [navigation]);
 
-  // --- App background / minimized ---
-  useEffect(() => {
-    const subscription = AppState.addEventListener(
-      'change',
-      (nextAppState: AppStateStatus) => {
-        if (nextAppState === 'background' || nextAppState === 'inactive') {
-          submitOnce();
-        }
-      },
-    );
+  // // --- App background / minimized ---
+  // useEffect(() => {
+  //   const subscription = AppState.addEventListener(
+  //     'change',
+  //     (nextAppState: AppStateStatus) => {
+  //       if (nextAppState === 'background' || nextAppState === 'inactive') {
+  //         console.log('Thired  Call');
 
-    return () => subscription.remove();
-  }, []);
+  //         submitOnce();
+  //       }
+  //     },
+  //   );
+
+  //   return () => subscription.remove();
+  // }, []);
 
   const BottomFunction = () => {
     return (
       <RNButton
         title={STRINGS.submit}
+        loading={isLoading}
         textColor={COLORS.WHITE}
         style={styles.button}
         backgroundColor={COLORS.SECONDARY}
